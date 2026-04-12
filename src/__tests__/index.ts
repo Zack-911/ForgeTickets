@@ -146,7 +146,7 @@ tickets.commands.add({
 })
 tickets.commands.add({
     type: "ticketSLABreach",
-    code: `$log[⚠️ SLA breach on ticket #$ticketEventData[number] ($ticketEventArg[0])]`,
+    code: `$log[⚠️ SLA breach on ticket #$ticketEventData[number]. $ticketNAME]`,
 })
 
 client.login()
