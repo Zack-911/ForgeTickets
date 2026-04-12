@@ -1,0 +1,1 @@
+{"version":3,"file":"TicketsCommandManager.d.ts","sourceRoot":"","sources":["../../src/managers/TicketsCommandManager.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,kBAAkB,EAAE,MAAM,uBAAuB,CAAA;AAC1D,OAAO,EAAE,aAAa,EAAE,MAAM,aAAa,CAAA;AAE3C,qBAAa,qBAAsB,SAAQ,kBAAkB,CAAC,MAAM,aAAa,CAAC;IAC9E,WAAW,SAAuB;CACrC"}

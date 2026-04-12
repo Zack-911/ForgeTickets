@@ -1,0 +1,45 @@
+{
+  "name": "@tryforge/forge.tickets",
+  "version": "1.0.0",
+  "description": "A powerful, fully-featured ticket system extension for ForgeScript.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "metadata"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "ts-node src/__tests__/index.ts",
+    "docgen": "tsc && typedoc src/index.ts && node dist/docgen",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write ./src/**/*",
+    "format:check": "prettier --check ./src/**/*"
+  },
+  "keywords": [
+    "forgescript",
+    "forge",
+    "discord",
+    "bot",
+    "tickets",
+    "support"
+  ],
+  "license": "GPL-3.0-or-later",
+  "peerDependencies": {
+    "@tryforge/forgescript": "^2.0.0",
+    "@tryforge/forge.db": "^1.0.0"
+  },
+  "devDependencies": {
+    "@tryforge/forgescript": "^2.5.0",
+    "@tryforge/forge.db": "^2.1.1",
+    "@types/node": "^20.0.0",
+    "discord.js": "^14.25.0",
+    "typedoc": "^0.26.11",
+    "typescript": "^5.6.3",
+    "prettier": "^3.5.3"
+  },
+  "dependencies": {
+    "tiny-typed-emitter": "^2.1.0",
+    "typeorm": "^0.3.27"
+  }
+}

@@ -1,0 +1,1 @@
+{"TicketPriority":["Low","Medium","High","Urgent"],"TicketProperty":["id","number","state","priority","openerID","channelID","categoryID","teamID","claimedBy","subject","createdAt","closedAt","closedBy","closeReason","lastActivityAt","participants","tags","formAnswers","notes","slaStatus"],"TranscriptFormat":["HTML","Text","Both"]}
