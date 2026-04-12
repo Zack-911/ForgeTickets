@@ -9,6 +9,25 @@ export class TranscriptGenerator {
      * Generates and uploads a transcript for a ticket.
      * Automatically sends it to the transcript channel if configured.
      */
+    /**
+     * Builds the transcript content without sending it anywhere.
+     * Returns the raw HTML and/or text strings based on the configured format.
+     */
+    public static async build(ticket: Ticket, channel: TextChannel, format: TranscriptFormat = TranscriptFormat.HTML): Promise<{ html: string | null; text: string | null }> {
+        const messages = await this._fetchAllMessages(channel)
+        const sorted = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp)
+
+        const html = (format === TranscriptFormat.HTML || format === TranscriptFormat.Both)
+            ? this._buildHTML(ticket, sorted, { name: "" } as TicketCategory)
+            : null
+
+        const text = (format === TranscriptFormat.Text || format === TranscriptFormat.Both)
+            ? this._buildText(ticket, sorted)
+            : null
+
+        return { html, text }
+    }
+
     public static async generate(ticket: Ticket, channel: TextChannel, category: TicketCategory): Promise<void> {
         const messages = await this._fetchAllMessages(channel)
         const sorted = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp)
@@ -93,8 +112,8 @@ export class TranscriptGenerator {
         const formSection =
             ticket.formAnswers && Object.keys(ticket.formAnswers).length
                 ? `<div class="meta-section"><h3>📋 Form Answers</h3><table>${Object.entries(ticket.formAnswers)
-                      .map(([k, v]) => `<tr><td><b>${this._escapeHTML(k)}</b></td><td>${this._escapeHTML(v)}</td></tr>`)
-                      .join("")}</table></div>`
+                    .map(([k, v]) => `<tr><td><b>${this._escapeHTML(k)}</b></td><td>${this._escapeHTML(v)}</td></tr>`)
+                    .join("")}</table></div>`
                 : ""
 
         return `<!DOCTYPE html>
