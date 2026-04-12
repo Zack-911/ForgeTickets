@@ -131,15 +131,15 @@ client.commands.add({
 // Events
 tickets.commands.add({
     type: "ticketOpen",
-    code: `$log[🎫 Ticket #$ticketEventData[number] opened by <@$ticketEventData[openerID]>]`,
+    code: `$log[🎫 Ticket #$ticketEventData[number]\nData: $ticketEvent]`,
 });
 tickets.commands.add({
     type: "ticketClose",
-    code: `$log[🔒 Ticket #$ticketEventData[number] closed by <@$ticketEventArg[0]>]`,
+    code: `$log[🔒 Ticket #$ticketEventData[number] closed\nData: $ticketEvent]`,
 });
 tickets.commands.add({
     type: "ticketSLABreach",
-    code: `$log[⚠️ SLA breach on ticket #$ticketEventData[number]. $ticketNAME]`,
+    code: `$log[⚠️ SLA breach on ticket #$ticketEventData[number]\nData: $ticketEvent]`,
 });
 client.login();
 //# sourceMappingURL=index.js.map
