@@ -100,7 +100,7 @@ client.commands.add({
 client.commands.add({
     name: "transcript",
     type: "messageCreate",
-    code: `$onlyIf[$isTicket;❌ Not a ticket.] $generateTranscript ✅ Transcript sent!`,
+    code: `$onlyIf[$isTicket;❌ Not a ticket.] $writeFile[./Ticket-$ticketNumber.html;$generateTranscript] ✅ Transcript saved to \`./Ticket-$ticketNumber.html\`!`,
 })
 client.commands.add({
     name: "blacklist",
