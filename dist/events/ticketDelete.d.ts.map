@@ -1,1 +1,1 @@
-{"version":3,"file":"ticketDelete.d.ts","sourceRoot":"","sources":["../../src/events/ticketDelete.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,kBAAkB,EAAE,MAAM,aAAa,CAAA;;AAGhD,wBAUE"}
+{"version":3,"file":"ticketDelete.d.ts","sourceRoot":"","sources":["../../src/events/ticketDelete.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,kBAAkB,EAAE,MAAM,aAAa,CAAA;;AAIhD,wBAiBE"}

@@ -30,9 +30,9 @@ function getProperty(ticket, prop, sep) {
         return undefined;
     switch (prop) {
         case TicketProperty.participants:
-            return Array.isArray(ticket.participants) ? ticket.participants.join(sep ?? ", ") : ticket.participants;
+            return Array.isArray(ticket.participants) ? ticket.participants.join(sep ?? ", ") : String(ticket.participants);
         case TicketProperty.tags:
-            return Array.isArray(ticket.tags) ? ticket.tags.join(sep ?? ", ") : ticket.tags;
+            return Array.isArray(ticket.tags) ? ticket.tags.join(sep ?? ", ") : String(ticket.tags);
         case TicketProperty.formAnswers:
             return JSON.stringify(ticket.formAnswers ?? {});
         case TicketProperty.notes:
@@ -40,7 +40,8 @@ function getProperty(ticket, prop, sep) {
         case TicketProperty.slaStatus:
             return JSON.stringify(ticket.slaStatus ?? null);
         default:
-            return ticket[prop];
+            const val = ticket[prop];
+            return val !== undefined && val !== null ? String(val) : undefined;
     }
 }
 exports.default = new forgescript_1.NativeFunction({
@@ -60,7 +61,7 @@ exports.default = new forgescript_1.NativeFunction({
         },
         {
             name: "separator",
-            description: "Separator for array-type properties (participants, tags)",
+            description: "Separator for array properties (participants, tags). Default: \", \"",
             type: forgescript_1.ArgType.String,
             required: false,
             rest: false,
@@ -68,11 +69,11 @@ exports.default = new forgescript_1.NativeFunction({
     ],
     output: forgescript_1.ArgType.Unknown,
     execute(ctx, [prop, sep]) {
-        const ticket = ctx.obj ?? ctx.runtime?.obj;
+        // @ts-ignore
+        const ticket = ctx.runtime.extras?.ticket;
         if (!ticket)
-            return this.success();
-        const val = getProperty(ticket, prop, sep ?? undefined);
-        return this.success(val === undefined ? undefined : String(val));
+            return this.customError("No ticket in event context");
+        return this.success(getProperty(ticket, prop, sep ?? undefined));
     },
 });
 //# sourceMappingURL=ticketEventData.js.map

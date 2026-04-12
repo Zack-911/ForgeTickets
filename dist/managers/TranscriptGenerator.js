@@ -13,6 +13,21 @@ class TranscriptGenerator {
      * Generates and uploads a transcript for a ticket.
      * Automatically sends it to the transcript channel if configured.
      */
+    /**
+     * Builds the transcript content without sending it anywhere.
+     * Returns the raw HTML and/or text strings based on the configured format.
+     */
+    static async build(ticket, channel, format = entities_1.TranscriptFormat.HTML) {
+        const messages = await this._fetchAllMessages(channel);
+        const sorted = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+        const html = (format === entities_1.TranscriptFormat.HTML || format === entities_1.TranscriptFormat.Both)
+            ? this._buildHTML(ticket, sorted, { name: "" })
+            : null;
+        const text = (format === entities_1.TranscriptFormat.Text || format === entities_1.TranscriptFormat.Both)
+            ? this._buildText(ticket, sorted)
+            : null;
+        return { html, text };
+    }
     static async generate(ticket, channel, category) {
         const messages = await this._fetchAllMessages(channel);
         const sorted = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
