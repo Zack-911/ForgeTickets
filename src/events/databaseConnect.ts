@@ -5,11 +5,17 @@ import { ForgeTickets } from ".."
 export default new TicketEventHandler({
     name: "databaseConnect",
     version: "1.0.0",
-    description: "Fired on databaseConnect.",
-    listener: function (...args: any[]) {
-        const commands = this.getExtension(ForgeTickets, true).commands.get("databaseConnect")
+    description: "Fired when the database connects.",
+    listener: async function () {
+        const ext = this.getExtension(ForgeTickets, true)
+        const commands = ext.commands.get("databaseConnect")
         for (const command of commands) {
-            Interpreter.run({ client: this, command, data: command.compiled.code, obj: args[0], extras: { args } })
+            Interpreter.run({
+                client: this,
+                command,
+                data: command.compiled.code,
+                obj: {}
+            })
         }
     },
 })
