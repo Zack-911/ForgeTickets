@@ -129,28 +129,6 @@ Channel name templates: `{count}` `{id}` `{username}`
 
 ---
 
-## Events
-
-| Event | `$ticketEventArg[1]` | `$ticketEventArg[2]` |
-|---|---|---|
-| `ticketOpen` | — | — |
-| `ticketClose` | closedByID | — |
-| `ticketClaim` | claimedByID | — |
-| `ticketUnclaim` | unclaimedByID | — |
-| `ticketDelete` | — | — |
-| `ticketReopen` | — | — |
-| `ticketLock` | lockedByID | — |
-| `ticketUnlock` | unlockedByID | — |
-| `ticketTransfer` | fromTeamID | toTeamID |
-| `ticketSLABreach` | `"response"` or `"resolution"` | — |
-| `ticketNoteAdd` | authorID | content |
-| `ticketPriorityChange` | oldPriority | newPriority |
-| `ticketTagAdd` | tag | — |
-| `ticketTagRemove` | tag | — |
-| `databaseConnect` | — | — |
-
----
-
 ## Building
 
 ```bash
