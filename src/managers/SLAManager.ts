@@ -20,7 +20,7 @@ export class SLAManager {
 
     constructor(
         private readonly client: ForgeClient,
-        private readonly emitter: TypedEmitter<TransformEvents<ITicketEvents>>,
+        private readonly emitter: TypedEmitter<TransformEvents<ITicketEvents>>
     ) {}
 
     public startSLA(ticket: Ticket, config: ISLAConfig) {
@@ -72,7 +72,7 @@ export class SLAManager {
     public clearSLA(ticketID: string) {
         const entry = this.entries.get(ticketID)
         if (!entry) return
-        if (entry.responseTimer)   clearTimeout(entry.responseTimer)
+        if (entry.responseTimer) clearTimeout(entry.responseTimer)
         if (entry.resolutionTimer) clearTimeout(entry.resolutionTimer)
         this.entries.delete(ticketID)
     }
@@ -83,21 +83,23 @@ export class SLAManager {
         if (!ch) return
 
         const label = type === "response" ? "Response SLA" : "Resolution SLA"
-        const mentions = config.alertRoles?.map(r => `<@&${r}>`).join(" ") ?? ""
+        const mentions = config.alertRoles?.map((r) => `<@&${r}>`).join(" ") ?? ""
 
-        await ch.send({
-            content: mentions || undefined,
-            embeds: [
-                new EmbedBuilder()
-                    .setTitle(`⚠️ SLA Breach — ${label}`)
-                    .setDescription(`Ticket **#${ticket.number}** has breached its **${label}** deadline.`)
-                    .setColor(0xED4245)
-                    .addFields(
-                        { name: "Ticket", value: `<#${ticket.channelID}>`, inline: true },
-                        { name: "Opener", value: `<@${ticket.openerID}>`, inline: true },
-                    )
-                    .setTimestamp()
-            ]
-        }).catch(noop)
+        await ch
+            .send({
+                content: mentions || undefined,
+                embeds: [
+                    new EmbedBuilder()
+                        .setTitle(`⚠️ SLA Breach — ${label}`)
+                        .setDescription(`Ticket **#${ticket.number}** has breached its **${label}** deadline.`)
+                        .setColor(0xed4245)
+                        .addFields(
+                            { name: "Ticket", value: `<#${ticket.channelID}>`, inline: true },
+                            { name: "Opener", value: `<@${ticket.openerID}>`, inline: true }
+                        )
+                        .setTimestamp(),
+                ],
+            })
+            .catch(noop)
     }
 }

@@ -1,10 +1,5 @@
 import { ArgType, NativeFunction } from "@tryforge/forgescript"
-import {
-    ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle,
-    EmbedBuilder,
-} from "discord.js"
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js"
 import type { TextChannel } from "discord.js"
 import { TicketsDatabase } from "../../structures/database"
 import { TicketPanel, ICategoryEmbed, IPanelButton } from "../../structures/entities"
@@ -35,14 +30,16 @@ export default new NativeFunction({
     output: ArgType.String,
     async execute(ctx, [channel, embedJSON]) {
         const cats = await TicketsDatabase.getCategoriesByGuild(ctx.guild!.id)
-        if (!cats.length) return this.customError("No categories configured. Create a category first with $createCategory.")
+        if (!cats.length)
+            return this.customError("No categories configured. Create a category first with $createCategory.")
 
         const panelEmbedDef = embedJSON ? (embedJSON as unknown as ICategoryEmbed) : null
         const embed = new EmbedBuilder()
             .setTitle(panelEmbedDef?.title ?? "🎫 Support Tickets")
             .setDescription(panelEmbedDef?.description ?? "Select a category below to open a support ticket.")
             .setColor(panelEmbedDef?.color ?? 0x5865f2)
-        if (panelEmbedDef?.footerText) embed.setFooter({ text: panelEmbedDef.footerText, iconURL: panelEmbedDef.footerIconURL })
+        if (panelEmbedDef?.footerText)
+            embed.setFooter({ text: panelEmbedDef.footerText, iconURL: panelEmbedDef.footerIconURL })
         if (panelEmbedDef?.thumbnailURL) embed.setThumbnail(panelEmbedDef.thumbnailURL)
 
         const buttons: IPanelButton[] = []

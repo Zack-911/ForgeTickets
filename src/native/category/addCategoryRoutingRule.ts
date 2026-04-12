@@ -5,7 +5,8 @@ import { IRoutingRule } from "../../structures/entities"
 export default new NativeFunction({
     name: "$addCategoryRoutingRule",
     version: "1.0.0",
-    description: "Adds a smart routing rule to a category. Tickets whose subject contains any keyword are routed to the target team.",
+    description:
+        "Adds a smart routing rule to a category. Tickets whose subject contains any keyword are routed to the target team.",
     unwrap: true,
     brackets: true,
     args: [

@@ -43,13 +43,19 @@ class ForgeTickets extends forgescript_1.ForgeExtension {
         this.client = client;
         this.commands = new TicketsCommandManager_1.TicketsCommandManager(client);
         forgescript_1.EventManager.load("ForgeTicketsEvents", path_1.default.join(__dirname, "./events"));
-        this.load(path_1.default.join(__dirname, "./native"));
-        new TicketsInteractionHandler_1.TicketsInteractionHandler(client);
-        await new database_1.TicketsDatabase(this.emitter).init();
-        this.ticketsManager = new TicketsManager_1.TicketsManager(client, this.emitter);
         if (this.options.events?.length) {
-            client.events.load("ForgeTicketsEvents", this.options.events);
+            this.client.events.load("ForgeTicketsEvents", this.options.events);
         }
+        this.load(path_1.default.join(__dirname, "./native"));
+        console.log("uwu");
+        const db = new database_1.TicketsDatabase(this.emitter);
+        console.log(":3");
+        await db.init();
+        console.log("hello");
+        new TicketsInteractionHandler_1.TicketsInteractionHandler(client);
+        console.log("hiya");
+        this.ticketsManager = new TicketsManager_1.TicketsManager(client, this.emitter);
+        console.log("uwu");
     }
 }
 exports.ForgeTickets = ForgeTickets;

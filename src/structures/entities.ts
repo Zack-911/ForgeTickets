@@ -1,24 +1,22 @@
 import "reflect-metadata"
-import {
-    Entity, Column, PrimaryColumn, ObjectIdColumn,
-} from "typeorm"
+import { Entity, Column, PrimaryColumn, ObjectIdColumn } from "typeorm"
 import type { Snowflake } from "discord.js"
 import { SnowflakeUtil } from "discord.js"
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export enum TicketState {
-    Open      = "open",
-    Claimed   = "claimed",
-    Pending   = "pending",
-    Closed    = "closed",
-    Locked    = "locked",
+    Open = "open",
+    Claimed = "claimed",
+    Pending = "pending",
+    Closed = "closed",
+    Locked = "locked",
 }
 
 export enum TicketPriority {
-    Low    = "low",
+    Low = "low",
     Medium = "medium",
-    High   = "high",
+    High = "high",
     Urgent = "urgent",
 }
 
@@ -29,10 +27,10 @@ export enum TranscriptFormat {
 }
 
 export enum RoutingStrategy {
-    RoundRobin    = "round_robin",
-    LeastActive   = "least_active",
-    Random        = "random",
-    Manual        = "manual",
+    RoundRobin = "round_robin",
+    LeastActive = "least_active",
+    Random = "random",
+    Manual = "manual",
 }
 
 // ─── Form Field ───────────────────────────────────────────────────────────────
@@ -184,17 +182,17 @@ export class TicketCategory {
     ticketCount: number
 
     constructor(options?: Partial<TicketCategory>) {
-        this.id              = options?.id ?? SnowflakeUtil.generate().toString()
-        this.guildID         = options?.guildID ?? ""
-        this.name            = options?.name ?? ""
+        this.id = options?.id ?? SnowflakeUtil.generate().toString()
+        this.guildID = options?.guildID ?? ""
+        this.name = options?.name ?? ""
         this.channelNameTemplate = options?.channelNameTemplate ?? "ticket-{count}"
         this.transcriptFormat = options?.transcriptFormat ?? TranscriptFormat.HTML
         this.routingStrategy = options?.routingStrategy ?? RoutingStrategy.Manual
-        this.maxPerUser      = options?.maxPerUser ?? 1
-        this.enabled         = options?.enabled ?? true
-        this.autoCloseAfter  = options?.autoCloseAfter ?? 0
-        this.deleteAfter     = options?.deleteAfter ?? 0
-        this.ticketCount     = options?.ticketCount ?? 0
+        this.maxPerUser = options?.maxPerUser ?? 1
+        this.enabled = options?.enabled ?? true
+        this.autoCloseAfter = options?.autoCloseAfter ?? 0
+        this.deleteAfter = options?.deleteAfter ?? 0
+        this.ticketCount = options?.ticketCount ?? 0
     }
 }
 
@@ -243,16 +241,16 @@ export class TicketTeam {
     rrIndex: number
 
     constructor(options?: Partial<TicketTeam>) {
-        this.id        = options?.id ?? SnowflakeUtil.generate().toString()
-        this.guildID   = options?.guildID ?? ""
-        this.name      = options?.name ?? ""
-        this.roles     = options?.roles ?? []
-        this.members   = options?.members ?? []
-        this.canClaim  = options?.canClaim ?? true
-        this.canClose  = options?.canClose ?? true
+        this.id = options?.id ?? SnowflakeUtil.generate().toString()
+        this.guildID = options?.guildID ?? ""
+        this.name = options?.name ?? ""
+        this.roles = options?.roles ?? []
+        this.members = options?.members ?? []
+        this.canClaim = options?.canClaim ?? true
+        this.canClose = options?.canClose ?? true
         this.canDelete = options?.canDelete ?? false
         this.pingOnOpen = options?.pingOnOpen ?? true
-        this.rrIndex   = options?.rrIndex ?? 0
+        this.rrIndex = options?.rrIndex ?? 0
     }
 }
 
@@ -288,12 +286,12 @@ export class BlacklistEntry {
     expiresAt: number
 
     constructor(options?: Partial<BlacklistEntry>) {
-        this.id       = options?.id ?? SnowflakeUtil.generate().toString()
-        this.guildID  = options?.guildID ?? ""
-        this.type     = options?.type ?? "user"
+        this.id = options?.id ?? SnowflakeUtil.generate().toString()
+        this.guildID = options?.guildID ?? ""
+        this.type = options?.type ?? "user"
         this.targetID = options?.targetID ?? ""
-        this.addedBy  = options?.addedBy ?? ""
-        this.addedAt  = options?.addedAt ?? Date.now()
+        this.addedBy = options?.addedBy ?? ""
+        this.addedAt = options?.addedAt ?? Date.now()
         this.expiresAt = options?.expiresAt ?? 0
     }
 
@@ -333,10 +331,10 @@ export class TicketPanel {
     buttons: IPanelButton[]
 
     constructor(options?: Partial<TicketPanel>) {
-        this.id        = options?.id ?? SnowflakeUtil.generate().toString()
-        this.guildID   = options?.guildID ?? ""
+        this.id = options?.id ?? SnowflakeUtil.generate().toString()
+        this.guildID = options?.guildID ?? ""
         this.channelID = options?.channelID ?? ""
-        this.buttons   = options?.buttons ?? []
+        this.buttons = options?.buttons ?? []
     }
 }
 
@@ -426,19 +424,19 @@ export class Ticket {
     deleted: boolean
 
     constructor(options?: Partial<Ticket>) {
-        this.id           = options?.id ?? SnowflakeUtil.generate().toString()
-        this.guildID      = options?.guildID ?? ""
-        this.channelID    = options?.channelID ?? ""
-        this.openerID     = options?.openerID ?? ""
-        this.state        = options?.state ?? TicketState.Open
-        this.priority     = options?.priority ?? TicketPriority.Medium
-        this.number       = options?.number ?? 0
+        this.id = options?.id ?? SnowflakeUtil.generate().toString()
+        this.guildID = options?.guildID ?? ""
+        this.channelID = options?.channelID ?? ""
+        this.openerID = options?.openerID ?? ""
+        this.state = options?.state ?? TicketState.Open
+        this.priority = options?.priority ?? TicketPriority.Medium
+        this.number = options?.number ?? 0
         this.participants = options?.participants ?? []
-        this.tags         = options?.tags ?? []
-        this.notes        = options?.notes ?? []
-        this.createdAt    = options?.createdAt ?? Date.now()
+        this.tags = options?.tags ?? []
+        this.notes = options?.notes ?? []
+        this.createdAt = options?.createdAt ?? Date.now()
         this.lastActivityAt = options?.lastActivityAt ?? Date.now()
-        this.deleted      = options?.deleted ?? false
+        this.deleted = options?.deleted ?? false
     }
 
     public touch() {
@@ -457,7 +455,9 @@ export class Ticket {
 
     /** Returns whether the ticket is currently considered active */
     public isActive(): boolean {
-        return this.state === TicketState.Open || this.state === TicketState.Claimed || this.state === TicketState.Pending
+        return (
+            this.state === TicketState.Open || this.state === TicketState.Claimed || this.state === TicketState.Pending
+        )
     }
 }
 
@@ -520,11 +520,11 @@ export class GuildSettings {
     dmOnClose: boolean
 
     constructor(options?: Partial<GuildSettings>) {
-        this.guildID           = options?.guildID ?? ""
-        this.globalStaffRoles  = options?.globalStaffRoles ?? []
-        this.totalTickets      = options?.totalTickets ?? 0
-        this.dmOnOpen          = options?.dmOnOpen ?? false
-        this.dmOnClose         = options?.dmOnClose ?? false
+        this.guildID = options?.guildID ?? ""
+        this.globalStaffRoles = options?.globalStaffRoles ?? []
+        this.totalTickets = options?.totalTickets ?? 0
+        this.dmOnOpen = options?.dmOnOpen ?? false
+        this.dmOnClose = options?.dmOnClose ?? false
     }
 }
 

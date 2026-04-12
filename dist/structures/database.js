@@ -9,7 +9,14 @@ class TicketsDatabase extends forge_db_1.DataBaseManager {
     database = "forge-tickets.db";
     entityManager = {
         sqlite: [entities_1.Ticket, entities_1.TicketCategory, entities_1.TicketTeam, entities_1.BlacklistEntry, entities_1.TicketPanel, entities_1.GuildSettings],
-        mongodb: [entities_1.MongoTicket, entities_1.MongoTicketCategory, entities_1.MongoTicketTeam, entities_1.MongoBlacklistEntry, entities_1.MongoTicketPanel, entities_1.MongoGuildSettings],
+        mongodb: [
+            entities_1.MongoTicket,
+            entities_1.MongoTicketCategory,
+            entities_1.MongoTicketTeam,
+            entities_1.MongoBlacklistEntry,
+            entities_1.MongoTicketPanel,
+            entities_1.MongoGuildSettings,
+        ],
         mysql: [entities_1.Ticket, entities_1.TicketCategory, entities_1.TicketTeam, entities_1.BlacklistEntry, entities_1.TicketPanel, entities_1.GuildSettings],
         postgres: [entities_1.Ticket, entities_1.TicketCategory, entities_1.TicketTeam, entities_1.BlacklistEntry, entities_1.TicketPanel, entities_1.GuildSettings],
     };
@@ -39,19 +46,19 @@ class TicketsDatabase extends forge_db_1.DataBaseManager {
     }
     // ─── Ticket ────────────────────────────────────────────────────────────
     static async getTicket(id) {
-        return await this.db.getRepository(this.entities.Ticket).findOneBy({ id });
+        return (await this.db.getRepository(this.entities.Ticket).findOneBy({ id }));
     }
     static async getTicketByChannel(channelID) {
-        return await this.db.getRepository(this.entities.Ticket).findOneBy({ channelID });
+        return (await this.db.getRepository(this.entities.Ticket).findOneBy({ channelID }));
     }
     static async findTickets(where) {
-        return await this.db.getRepository(this.entities.Ticket).find({ where: where });
+        return (await this.db.getRepository(this.entities.Ticket).find({ where: where }));
     }
     static async getOpenTicketsByUser(guildID, openerID) {
-        const all = await this.db.getRepository(this.entities.Ticket).find({
-            where: { guildID, openerID, deleted: false }
-        });
-        return all.filter(t => t.isActive());
+        const all = (await this.db.getRepository(this.entities.Ticket).find({
+            where: { guildID, openerID, deleted: false },
+        }));
+        return all.filter((t) => t.isActive());
     }
     static async saveTicket(ticket) {
         const old = await this.getTicket(ticket.id);
@@ -66,25 +73,29 @@ class TicketsDatabase extends forge_db_1.DataBaseManager {
         await this.db.getRepository(this.entities.Ticket).delete({ id });
     }
     static async getActiveTickets(guildID) {
-        const all = await this.db.getRepository(this.entities.Ticket).find({ where: { guildID, deleted: false } });
-        return all.filter(t => t.isActive());
+        const all = (await this.db
+            .getRepository(this.entities.Ticket)
+            .find({ where: { guildID, deleted: false } }));
+        return all.filter((t) => t.isActive());
     }
     static async getTicketStats(guildID) {
-        const all = await this.db.getRepository(this.entities.Ticket).find({ where: { guildID } });
+        const all = (await this.db.getRepository(this.entities.Ticket).find({ where: { guildID } }));
         return {
             total: all.length,
-            open: all.filter(t => t.state === entities_1.TicketState.Open).length,
-            claimed: all.filter(t => t.state === entities_1.TicketState.Claimed).length,
-            closed: all.filter(t => t.state === entities_1.TicketState.Closed).length,
-            pending: all.filter(t => t.state === entities_1.TicketState.Pending).length,
+            open: all.filter((t) => t.state === entities_1.TicketState.Open).length,
+            claimed: all.filter((t) => t.state === entities_1.TicketState.Claimed).length,
+            closed: all.filter((t) => t.state === entities_1.TicketState.Closed).length,
+            pending: all.filter((t) => t.state === entities_1.TicketState.Pending).length,
         };
     }
     // ─── Category ──────────────────────────────────────────────────────────
     static async getCategory(id) {
-        return await this.db.getRepository(this.entities.Category).findOneBy({ id });
+        return (await this.db.getRepository(this.entities.Category).findOneBy({ id }));
     }
     static async getCategoriesByGuild(guildID) {
-        return await this.db.getRepository(this.entities.Category).find({ where: { guildID } });
+        return (await this.db
+            .getRepository(this.entities.Category)
+            .find({ where: { guildID } }));
     }
     static async saveCategory(cat) {
         const old = await this.getCategory(cat.id);
@@ -100,10 +111,10 @@ class TicketsDatabase extends forge_db_1.DataBaseManager {
     }
     // ─── Team ──────────────────────────────────────────────────────────────
     static async getTeam(id) {
-        return await this.db.getRepository(this.entities.Team).findOneBy({ id });
+        return (await this.db.getRepository(this.entities.Team).findOneBy({ id }));
     }
     static async getTeamsByGuild(guildID) {
-        return await this.db.getRepository(this.entities.Team).find({ where: { guildID } });
+        return (await this.db.getRepository(this.entities.Team).find({ where: { guildID } }));
     }
     static async saveTeam(team) {
         const old = await this.getTeam(team.id);
@@ -119,18 +130,22 @@ class TicketsDatabase extends forge_db_1.DataBaseManager {
     }
     // ─── Blacklist ─────────────────────────────────────────────────────────
     static async getBlacklist(guildID) {
-        const entries = await this.db.getRepository(this.entities.Blacklist).find({ where: { guildID } });
+        const entries = (await this.db
+            .getRepository(this.entities.Blacklist)
+            .find({ where: { guildID } }));
         for (const entry of entries) {
             if (entry.isExpired()) {
-                this.db.getRepository(this.entities.Blacklist).delete({ id: entry.id }).catch(() => { });
+                this.db
+                    .getRepository(this.entities.Blacklist)
+                    .delete({ id: entry.id })
+                    .catch(() => { });
             }
         }
-        return entries.filter(e => !e.isExpired());
+        return entries.filter((e) => !e.isExpired());
     }
     static async isBlacklisted(guildID, userID, roleIDs) {
         const active = await this.getBlacklist(guildID);
-        return active.find(e => (e.type === "user" && e.targetID === userID) ||
-            (e.type === "role" && roleIDs.includes(e.targetID))) ?? null;
+        return (active.find((e) => (e.type === "user" && e.targetID === userID) || (e.type === "role" && roleIDs.includes(e.targetID))) ?? null);
     }
     static async addBlacklist(entry) {
         await this.db.getRepository(this.entities.Blacklist).save(entry);
@@ -142,10 +157,10 @@ class TicketsDatabase extends forge_db_1.DataBaseManager {
     }
     // ─── Panel ─────────────────────────────────────────────────────────────
     static async getPanel(id) {
-        return await this.db.getRepository(this.entities.Panel).findOneBy({ id });
+        return (await this.db.getRepository(this.entities.Panel).findOneBy({ id }));
     }
     static async getPanelByMessage(messageID) {
-        return await this.db.getRepository(this.entities.Panel).findOneBy({ messageID });
+        return (await this.db.getRepository(this.entities.Panel).findOneBy({ messageID }));
     }
     static async savePanel(panel) {
         const old = await this.getPanel(panel.id);
@@ -161,7 +176,9 @@ class TicketsDatabase extends forge_db_1.DataBaseManager {
     }
     // ─── Guild Settings ────────────────────────────────────────────────────
     static async getSettings(guildID) {
-        const existing = await this.db.getRepository(this.entities.Settings).findOneBy({ guildID });
+        const existing = (await this.db
+            .getRepository(this.entities.Settings)
+            .findOneBy({ guildID }));
         if (existing)
             return existing;
         const fresh = new entities_1.GuildSettings({ guildID });

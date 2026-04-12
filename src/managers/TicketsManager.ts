@@ -1,15 +1,25 @@
 import type { Snowflake, TextChannel, GuildMember } from "discord.js"
 import {
-    ActionRowBuilder, ButtonBuilder, ButtonStyle,
-    ChannelType, EmbedBuilder,
-    MessageFlags, PermissionsBitField, time,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ChannelType,
+    EmbedBuilder,
+    MessageFlags,
+    PermissionsBitField,
+    time,
 } from "discord.js"
 import { ForgeClient } from "@tryforge/forgescript"
 import { ForgeTickets } from ".."
 import { TicketsDatabase } from "../structures/database"
 import {
-    Ticket, TicketCategory, TicketState, TicketPriority,
-    TicketTeam, RoutingStrategy, ICategoryEmbed,
+    Ticket,
+    TicketCategory,
+    TicketState,
+    TicketPriority,
+    TicketTeam,
+    RoutingStrategy,
+    ICategoryEmbed,
 } from "../structures/entities"
 import { ITicketEvents } from "../handlers"
 import { TranscriptGenerator } from "./TranscriptGenerator"
@@ -36,7 +46,7 @@ export class TicketsManager {
 
     constructor(
         private readonly client: ForgeClient,
-        private readonly emitter: TypedEmitter<TransformEvents<ITicketEvents>>,
+        private readonly emitter: TypedEmitter<TransformEvents<ITicketEvents>>
     ) {
         this.slaManager = new SLAManager(client, emitter)
         this._restoreTimers()
@@ -68,19 +78,21 @@ export class TicketsManager {
         // Build channel name from template
         const channelName = category
             ? category.channelNameTemplate
-                .replace("{count}", String(settings.totalTickets).padStart(4, "0"))
-                .replace("{id}", openerID)
-                .replace("{username}", member.user.username.replace(/[^a-z0-9-]/gi, "").toLowerCase())
+                  .replace("{count}", String(settings.totalTickets).padStart(4, "0"))
+                  .replace("{id}", openerID)
+                  .replace("{username}", member.user.username.replace(/[^a-z0-9-]/gi, "").toLowerCase())
             : `ticket-${String(settings.totalTickets).padStart(4, "0")}`
 
         // Create the ticket channel
         const parentID = category?.parentChannelID
-        const channel = await guild.channels.create({
-            name: channelName,
-            type: ChannelType.GuildText,
-            parent: parentID ?? undefined,
-            permissionOverwrites: this._buildPermissions(guild.id, openerID, category, team),
-        }).catch(noop)
+        const channel = await guild.channels
+            .create({
+                name: channelName,
+                type: ChannelType.GuildText,
+                parent: parentID ?? undefined,
+                permissionOverwrites: this._buildPermissions(guild.id, openerID, category, team),
+            })
+            .catch(noop)
 
         if (!channel) return null
 
@@ -114,17 +126,20 @@ export class TicketsManager {
 
         // Ping team if enabled
         if (team?.pingOnOpen) {
-            const mentions = [
-                ...team.roles.map(r => `<@&${r}>`),
-                ...team.members.map(m => `<@${m}>`),
-            ].join(" ")
-            if (mentions) await (channel as TextChannel).send({ content: mentions, flags: MessageFlags.SuppressNotifications }).catch(noop)
+            const mentions = [...team.roles.map((r) => `<@&${r}>`), ...team.members.map((m) => `<@${m}>`)].join(" ")
+            if (mentions)
+                await (channel as TextChannel)
+                    .send({ content: mentions, flags: MessageFlags.SuppressNotifications })
+                    .catch(noop)
         }
 
         // Ping global staff
         if (settings.globalStaffRoles.length) {
-            const mentions = settings.globalStaffRoles.map(r => `<@&${r}>`).join(" ")
-            if (mentions) await (channel as TextChannel).send({ content: mentions, flags: MessageFlags.SuppressNotifications }).catch(noop)
+            const mentions = settings.globalStaffRoles.map((r) => `<@&${r}>`).join(" ")
+            if (mentions)
+                await (channel as TextChannel)
+                    .send({ content: mentions, flags: MessageFlags.SuppressNotifications })
+                    .catch(noop)
         }
 
         this.emitter.emit("ticketOpen", ticket)
@@ -132,7 +147,9 @@ export class TicketsManager {
         // DM opener
         if (settings.dmOnOpen) {
             const user = await this.client.users.fetch(openerID).catch(noop)
-            user?.send({ content: `✅ Your ticket **#${ticket.number}** has been created in **${guild.name}**: <#${channel.id}>` }).catch(noop)
+            user?.send({
+                content: `✅ Your ticket **#${ticket.number}** has been created in **${guild.name}**: <#${channel.id}>`,
+            }).catch(noop)
         }
 
         // Start SLA timer
@@ -146,7 +163,11 @@ export class TicketsManager {
         }
 
         // Log event
-        await this._log(guildID, `🎫 Ticket **#${ticket.number}** opened by <@${openerID}>${category ? ` in **${category.name}**` : ""}`, 0x57F287)
+        await this._log(
+            guildID,
+            `🎫 Ticket **#${ticket.number}** opened by <@${openerID}>${category ? ` in **${category.name}**` : ""}`,
+            0x57f287
+        )
 
         return ticket
     }
@@ -188,14 +209,20 @@ export class TicketsManager {
         const settings = await TicketsDatabase.getSettings(ticket.guildID)
         if (settings.dmOnClose) {
             const opener = await this.client.users.fetch(ticket.openerID).catch(noop)
-            opener?.send({ content: `📬 Your ticket **#${ticket.number}** has been closed. Reason: ${reason ?? "None"}` }).catch(noop)
+            opener
+                ?.send({ content: `📬 Your ticket **#${ticket.number}** has been closed. Reason: ${reason ?? "None"}` })
+                .catch(noop)
         }
 
         if (category?.deleteAfter && category.deleteAfter > 0) {
             this._scheduleDelete(ticket, category.deleteAfter)
         }
 
-        await this._log(ticket.guildID, `🔒 Ticket **#${ticket.number}** closed by <@${closedBy}>${reason ? `. Reason: ${reason}` : ""}`, 0xED4245)
+        await this._log(
+            ticket.guildID,
+            `🔒 Ticket **#${ticket.number}** closed by <@${closedBy}>${reason ? `. Reason: ${reason}` : ""}`,
+            0xed4245
+        )
         return ticket
     }
 
@@ -214,13 +241,16 @@ export class TicketsManager {
         const channel = this.client.channels.cache.get(ticket.channelID) as TextChannel | undefined
         if (channel) {
             await channel.permissionOverwrites.edit(claimedBy, { SendMessages: true, ViewChannel: true }).catch(noop)
-            await channel.send({
-                embeds: [new EmbedBuilder()
-                    .setDescription(`🎯 This ticket has been claimed by <@${claimedBy}>.`)
-                    .setColor(0x5865F2)
-                    .setTimestamp()
-                ]
-            }).catch(noop)
+            await channel
+                .send({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setDescription(`🎯 This ticket has been claimed by <@${claimedBy}>.`)
+                            .setColor(0x5865f2)
+                            .setTimestamp(),
+                    ],
+                })
+                .catch(noop)
         }
 
         this.emitter.emit("ticketClaim", ticket, claimedBy)
@@ -232,7 +262,7 @@ export class TicketsManager {
             this.slaManager.markFirstResponse(ticketID)
         }
 
-        await this._log(ticket.guildID, `🎯 Ticket **#${ticket.number}** claimed by <@${claimedBy}>`, 0x5865F2)
+        await this._log(ticket.guildID, `🎯 Ticket **#${ticket.number}** claimed by <@${claimedBy}>`, 0x5865f2)
         return ticket
     }
 
@@ -251,17 +281,20 @@ export class TicketsManager {
         const channel = this.client.channels.cache.get(ticket.channelID) as TextChannel | undefined
         if (channel) {
             if (prev) await channel.permissionOverwrites.delete(prev).catch(noop)
-            await channel.send({
-                embeds: [new EmbedBuilder()
-                    .setDescription(`↩️ This ticket has been unclaimed by <@${unclaimedBy}>.`)
-                    .setColor(0xFEE75C)
-                    .setTimestamp()
-                ]
-            }).catch(noop)
+            await channel
+                .send({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setDescription(`↩️ This ticket has been unclaimed by <@${unclaimedBy}>.`)
+                            .setColor(0xfee75c)
+                            .setTimestamp(),
+                    ],
+                })
+                .catch(noop)
         }
 
         this.emitter.emit("ticketUnclaim", ticket, unclaimedBy)
-        await this._log(ticket.guildID, `↩️ Ticket **#${ticket.number}** unclaimed by <@${unclaimedBy}>`, 0xFEE75C)
+        await this._log(ticket.guildID, `↩️ Ticket **#${ticket.number}** unclaimed by <@${unclaimedBy}>`, 0xfee75c)
         return ticket
     }
 
@@ -279,17 +312,22 @@ export class TicketsManager {
         if (channel) {
             const opener = await this.client.users.fetch(ticket.openerID).catch(noop)
             if (opener) await channel.permissionOverwrites.edit(opener, { SendMessages: false }).catch(noop)
-            await channel.send({
-                embeds: [new EmbedBuilder()
-                    .setDescription(`🔐 This ticket has been locked by <@${lockedBy}>. The opener can no longer send messages.`)
-                    .setColor(0xED4245)
-                    .setTimestamp()
-                ]
-            }).catch(noop)
+            await channel
+                .send({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setDescription(
+                                `🔐 This ticket has been locked by <@${lockedBy}>. The opener can no longer send messages.`
+                            )
+                            .setColor(0xed4245)
+                            .setTimestamp(),
+                    ],
+                })
+                .catch(noop)
         }
 
         this.emitter.emit("ticketLock", ticket, lockedBy)
-        await this._log(ticket.guildID, `🔐 Ticket **#${ticket.number}** locked by <@${lockedBy}>`, 0xED4245)
+        await this._log(ticket.guildID, `🔐 Ticket **#${ticket.number}** locked by <@${lockedBy}>`, 0xed4245)
         return ticket
     }
 
@@ -307,17 +345,20 @@ export class TicketsManager {
         if (channel) {
             const opener = await this.client.users.fetch(ticket.openerID).catch(noop)
             if (opener) await channel.permissionOverwrites.edit(opener, { SendMessages: true }).catch(noop)
-            await channel.send({
-                embeds: [new EmbedBuilder()
-                    .setDescription(`🔓 This ticket has been unlocked by <@${unlockedBy}>.`)
-                    .setColor(0x57F287)
-                    .setTimestamp()
-                ]
-            }).catch(noop)
+            await channel
+                .send({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setDescription(`🔓 This ticket has been unlocked by <@${unlockedBy}>.`)
+                            .setColor(0x57f287)
+                            .setTimestamp(),
+                    ],
+                })
+                .catch(noop)
         }
 
         this.emitter.emit("ticketUnlock", ticket, unlockedBy)
-        await this._log(ticket.guildID, `🔓 Ticket **#${ticket.number}** unlocked by <@${unlockedBy}>`, 0x57F287)
+        await this._log(ticket.guildID, `🔓 Ticket **#${ticket.number}** unlocked by <@${unlockedBy}>`, 0x57f287)
         return ticket
     }
 
@@ -339,14 +380,18 @@ export class TicketsManager {
 
         if (channel) {
             const opener = await this.client.users.fetch(ticket.openerID).catch(noop)
-            if (opener) await channel.permissionOverwrites.edit(opener, { SendMessages: true, ViewChannel: true }).catch(noop)
-            await channel.send({
-                embeds: [new EmbedBuilder()
-                    .setDescription(`🔄 This ticket has been reopened by <@${reopenedBy}>.`)
-                    .setColor(0x57F287)
-                    .setTimestamp()
-                ]
-            }).catch(noop)
+            if (opener)
+                await channel.permissionOverwrites.edit(opener, { SendMessages: true, ViewChannel: true }).catch(noop)
+            await channel
+                .send({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setDescription(`🔄 This ticket has been reopened by <@${reopenedBy}>.`)
+                            .setColor(0x57f287)
+                            .setTimestamp(),
+                    ],
+                })
+                .catch(noop)
         }
 
         this.emitter.emit("ticketReopen", ticket)
@@ -360,7 +405,7 @@ export class TicketsManager {
             this._scheduleAutoClose(ticket, category.autoCloseAfter)
         }
 
-        await this._log(ticket.guildID, `🔄 Ticket **#${ticket.number}** reopened by <@${reopenedBy}>`, 0x57F287)
+        await this._log(ticket.guildID, `🔄 Ticket **#${ticket.number}** reopened by <@${reopenedBy}>`, 0x57f287)
         return ticket
     }
 
@@ -381,7 +426,11 @@ export class TicketsManager {
         this._clearDelete(ticketID)
 
         this.emitter.emit("ticketDelete", ticket)
-        await this._log(ticket.guildID, `🗑️ Ticket **#${ticket.number}** deleted (opened by <@${ticket.openerID}>)`, 0xEB459E)
+        await this._log(
+            ticket.guildID,
+            `🗑️ Ticket **#${ticket.number}** deleted (opened by <@${ticket.openerID}>)`,
+            0xeb459e
+        )
         return true
     }
 
@@ -408,17 +457,24 @@ export class TicketsManager {
             for (const [id, perms] of overwrites) {
                 await channel.permissionOverwrites.edit(id, perms).catch(noop)
             }
-            await channel.send({
-                embeds: [new EmbedBuilder()
-                    .setDescription(`↗️ This ticket has been transferred to **${newTeam.name}**.`)
-                    .setColor(0x5865F2)
-                    .setTimestamp()
-                ]
-            }).catch(noop)
+            await channel
+                .send({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setDescription(`↗️ This ticket has been transferred to **${newTeam.name}**.`)
+                            .setColor(0x5865f2)
+                            .setTimestamp(),
+                    ],
+                })
+                .catch(noop)
         }
 
         this.emitter.emit("ticketTransfer", ticket, oldTeamID, newTeamID)
-        await this._log(ticket.guildID, `↗️ Ticket **#${ticket.number}** transferred to team **${newTeam.name}**`, 0x5865F2)
+        await this._log(
+            ticket.guildID,
+            `↗️ Ticket **#${ticket.number}** transferred to team **${newTeam.name}**`,
+            0x5865f2
+        )
         return ticket
     }
 
@@ -434,7 +490,9 @@ export class TicketsManager {
 
         const channel = this.client.channels.cache.get(ticket.channelID) as TextChannel | undefined
         if (channel) {
-            await channel.permissionOverwrites.edit(userID, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true }).catch(noop)
+            await channel.permissionOverwrites
+                .edit(userID, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true })
+                .catch(noop)
         }
         return ticket
     }
@@ -443,7 +501,7 @@ export class TicketsManager {
         const ticket = await TicketsDatabase.getTicket(ticketID)
         if (!ticket) return null
 
-        ticket.participants = ticket.participants.filter(p => p !== userID)
+        ticket.participants = ticket.participants.filter((p) => p !== userID)
         ticket.touch()
         await TicketsDatabase.saveTicket(ticket)
 
@@ -468,7 +526,7 @@ export class TicketsManager {
     public async removeTag(ticketID: string, tag: string): Promise<Ticket | null> {
         const ticket = await TicketsDatabase.getTicket(ticketID)
         if (!ticket) return null
-        ticket.tags = ticket.tags.filter(t => t !== tag)
+        ticket.tags = ticket.tags.filter((t) => t !== tag)
         await TicketsDatabase.saveTicket(ticket)
         this.emitter.emit("ticketTagRemove", ticket, tag)
         return ticket
@@ -483,7 +541,11 @@ export class TicketsManager {
         ticket.priority = priority
         await TicketsDatabase.saveTicket(ticket)
         this.emitter.emit("ticketPriorityChange", ticket, old, priority)
-        await this._log(ticket.guildID, `⚡ Ticket **#${ticket.number}** priority changed from **${old}** to **${priority}**`, 0xFEE75C)
+        await this._log(
+            ticket.guildID,
+            `⚡ Ticket **#${ticket.number}** priority changed from **${old}** to **${priority}**`,
+            0xfee75c
+        )
         return ticket
     }
 
@@ -500,7 +562,11 @@ export class TicketsManager {
 
     // ─── Smart Routing ────────────────────────────────────────────────────
 
-    private async _routeTicket(category: TicketCategory, formAnswers?: Record<string, string>, subject?: string): Promise<string | undefined> {
+    private async _routeTicket(
+        category: TicketCategory,
+        formAnswers?: Record<string, string>,
+        subject?: string
+    ): Promise<string | undefined> {
         if (!category.teamID && !category.routingRules?.length) return undefined
 
         // Check routing rules first
@@ -509,7 +575,7 @@ export class TicketsManager {
                 // Keyword matching against subject
                 if (rule.keywords?.length && subject) {
                     const lc = subject.toLowerCase()
-                    if (rule.keywords.some(kw => lc.includes(kw.toLowerCase()))) {
+                    if (rule.keywords.some((kw) => lc.includes(kw.toLowerCase()))) {
                         return rule.targetTeamID
                     }
                 }
@@ -541,28 +607,68 @@ export class TicketsManager {
 
     // ─── Channel Permissions ──────────────────────────────────────────────
 
-    private _buildPermissions(guildID: Snowflake, openerID: Snowflake, category: TicketCategory | null, team: TicketTeam | null) {
+    private _buildPermissions(
+        guildID: Snowflake,
+        openerID: Snowflake,
+        category: TicketCategory | null,
+        team: TicketTeam | null
+    ) {
         const base: any[] = [
             // Deny @everyone
             { id: guildID, deny: [PermissionsBitField.Flags.ViewChannel] },
             // Allow opener
-            { id: openerID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory, PermissionsBitField.Flags.AttachFiles] },
+            {
+                id: openerID,
+                allow: [
+                    PermissionsBitField.Flags.ViewChannel,
+                    PermissionsBitField.Flags.SendMessages,
+                    PermissionsBitField.Flags.ReadMessageHistory,
+                    PermissionsBitField.Flags.AttachFiles,
+                ],
+            },
         ]
 
         // Category staff roles
         if (category?.staffRoles) {
             for (const role of category.staffRoles) {
-                base.push({ id: role, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory, PermissionsBitField.Flags.ManageMessages, PermissionsBitField.Flags.AttachFiles] })
+                base.push({
+                    id: role,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.ReadMessageHistory,
+                        PermissionsBitField.Flags.ManageMessages,
+                        PermissionsBitField.Flags.AttachFiles,
+                    ],
+                })
             }
         }
 
         // Team roles and members
         if (team) {
             for (const role of team.roles) {
-                base.push({ id: role, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory, PermissionsBitField.Flags.ManageMessages, PermissionsBitField.Flags.AttachFiles] })
+                base.push({
+                    id: role,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.ReadMessageHistory,
+                        PermissionsBitField.Flags.ManageMessages,
+                        PermissionsBitField.Flags.AttachFiles,
+                    ],
+                })
             }
             for (const member of team.members) {
-                base.push({ id: member, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory, PermissionsBitField.Flags.ManageMessages, PermissionsBitField.Flags.AttachFiles] })
+                base.push({
+                    id: member,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.ReadMessageHistory,
+                        PermissionsBitField.Flags.ManageMessages,
+                        PermissionsBitField.Flags.AttachFiles,
+                    ],
+                })
             }
         }
 
@@ -571,7 +677,12 @@ export class TicketsManager {
 
     private async _buildTeamOverwrites(team: TicketTeam): Promise<Map<string, any>> {
         const map = new Map<string, any>()
-        const allow = [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory, PermissionsBitField.Flags.ManageMessages]
+        const allow = [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory,
+            PermissionsBitField.Flags.ManageMessages,
+        ]
         for (const role of team.roles) map.set(role, { allow })
         for (const member of team.members) map.set(member, { allow })
         return map
@@ -579,17 +690,30 @@ export class TicketsManager {
 
     // ─── Embeds ───────────────────────────────────────────────────────────
 
-    private async _sendOpenEmbed(channel: TextChannel, ticket: Ticket, category: TicketCategory | null, team: TicketTeam | null, member: GuildMember) {
+    private async _sendOpenEmbed(
+        channel: TextChannel,
+        ticket: Ticket,
+        category: TicketCategory | null,
+        team: TicketTeam | null,
+        member: GuildMember
+    ) {
         const embedDef = category?.openEmbed
         const embed = new EmbedBuilder()
             .setTitle(embedDef?.title ?? `🎫 Ticket #${ticket.number}`)
-            .setDescription(embedDef?.description ?? `Hello <@${ticket.openerID}>, welcome to your ticket!\nSupport staff will be with you shortly. Please describe your issue in detail.`)
-            .setColor(embedDef?.color ?? 0x5865F2)
+            .setDescription(
+                embedDef?.description ??
+                    `Hello <@${ticket.openerID}>, welcome to your ticket!\nSupport staff will be with you shortly. Please describe your issue in detail.`
+            )
+            .setColor(embedDef?.color ?? 0x5865f2)
             .setTimestamp()
             .addFields(
                 { name: "Category", value: category?.name ?? "General", inline: true },
-                { name: "Priority", value: `${this._priorityEmoji(ticket.priority)} ${ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}`, inline: true },
-                { name: "Opened by", value: `<@${ticket.openerID}>`, inline: true },
+                {
+                    name: "Priority",
+                    value: `${this._priorityEmoji(ticket.priority)} ${ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}`,
+                    inline: true,
+                },
+                { name: "Opened by", value: `<@${ticket.openerID}>`, inline: true }
             )
 
         if (embedDef?.footerText) embed.setFooter({ text: embedDef.footerText, iconURL: embedDef.footerIconURL })
@@ -598,9 +722,11 @@ export class TicketsManager {
 
         // Show form answers in embed
         if (ticket.formAnswers && Object.keys(ticket.formAnswers).length) {
-            const category_ = ticket.categoryID ? await TicketsDatabase.getCategory(ticket.categoryID).catch(() => null) : null
+            const category_ = ticket.categoryID
+                ? await TicketsDatabase.getCategory(ticket.categoryID).catch(() => null)
+                : null
             for (const [key, value] of Object.entries(ticket.formAnswers)) {
-                const fieldDef = category_?.form?.find(f => f.key === key)
+                const fieldDef = category_?.form?.find((f) => f.key === key)
                 embed.addFields({ name: fieldDef?.label ?? key, value: value || "N/A", inline: false })
             }
         }
@@ -609,44 +735,82 @@ export class TicketsManager {
 
         // SLA footer note
         if (category?.sla?.responseTime) {
-            embed.addFields({ name: "⏱️ Response SLA", value: `${this._formatDuration(category.sla.responseTime)}`, inline: true })
+            embed.addFields({
+                name: "⏱️ Response SLA",
+                value: `${this._formatDuration(category.sla.responseTime)}`,
+                inline: true,
+            })
         }
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder().setCustomId(encodeCID(CID.TICKET_CLOSE, ticket.id)).setLabel("Close").setEmoji("🔒").setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId(encodeCID(CID.TICKET_CLAIM, ticket.id)).setLabel("Claim").setEmoji("🎯").setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId(encodeCID(CID.TICKET_LOCK, ticket.id)).setLabel("Lock").setEmoji("🔐").setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+                .setCustomId(encodeCID(CID.TICKET_CLOSE, ticket.id))
+                .setLabel("Close")
+                .setEmoji("🔒")
+                .setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
+                .setCustomId(encodeCID(CID.TICKET_CLAIM, ticket.id))
+                .setLabel("Claim")
+                .setEmoji("🎯")
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId(encodeCID(CID.TICKET_LOCK, ticket.id))
+                .setLabel("Lock")
+                .setEmoji("🔐")
+                .setStyle(ButtonStyle.Secondary)
         )
 
         await channel.send({ embeds: [embed], components: [row] }).catch(noop)
     }
 
-    private async _sendCloseEmbed(channel: TextChannel, ticket: Ticket, category: TicketCategory | null, closedBy: Snowflake) {
+    private async _sendCloseEmbed(
+        channel: TextChannel,
+        ticket: Ticket,
+        category: TicketCategory | null,
+        closedBy: Snowflake
+    ) {
         const embedDef = category?.closeEmbed
         const embed = new EmbedBuilder()
             .setTitle(embedDef?.title ?? `🔒 Ticket Closed`)
             .setDescription(embedDef?.description ?? `This ticket has been closed by <@${closedBy}>.`)
-            .setColor(embedDef?.color ?? 0xED4245)
+            .setColor(embedDef?.color ?? 0xed4245)
             .setTimestamp()
             .addFields(
                 { name: "Ticket #", value: `${ticket.number}`, inline: true },
                 { name: "Opened by", value: `<@${ticket.openerID}>`, inline: true },
                 { name: "Closed by", value: `<@${closedBy}>`, inline: true },
-                { name: "Close reason", value: ticket.closeReason ?? "None", inline: false },
+                { name: "Close reason", value: ticket.closeReason ?? "None", inline: false }
             )
 
         if (ticket.slaStatus) {
             embed.addFields(
-                { name: "First Response", value: ticket.slaStatus.firstResponseAt ? time(new Date(ticket.slaStatus.firstResponseAt)) : "N/A", inline: true },
-                { name: "SLA Breached", value: (ticket.slaStatus.responseBreached || ticket.slaStatus.resolutionBreached) ? "⚠️ Yes" : "✅ No", inline: true },
+                {
+                    name: "First Response",
+                    value: ticket.slaStatus.firstResponseAt ? time(new Date(ticket.slaStatus.firstResponseAt)) : "N/A",
+                    inline: true,
+                },
+                {
+                    name: "SLA Breached",
+                    value:
+                        ticket.slaStatus.responseBreached || ticket.slaStatus.resolutionBreached ? "⚠️ Yes" : "✅ No",
+                    inline: true,
+                }
             )
         }
 
         if (embedDef?.footerText) embed.setFooter({ text: embedDef.footerText, iconURL: embedDef.footerIconURL })
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder().setCustomId(encodeCID(CID.TICKET_REOPEN, ticket.id)).setLabel("Reopen").setEmoji("🔄").setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId(encodeCID(CID.TICKET_DELETE, ticket.id)).setLabel("Delete").setEmoji("🗑️").setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
+                .setCustomId(encodeCID(CID.TICKET_REOPEN, ticket.id))
+                .setLabel("Reopen")
+                .setEmoji("🔄")
+                .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+                .setCustomId(encodeCID(CID.TICKET_DELETE, ticket.id))
+                .setLabel("Delete")
+                .setEmoji("🗑️")
+                .setStyle(ButtonStyle.Danger)
         )
 
         await channel.send({ embeds: [embed], components: [row] }).catch(noop)
@@ -671,7 +835,10 @@ export class TicketsManager {
 
     private _clearAutoClose(ticketID: string) {
         const timer = this.autoCloseTimers.get(ticketID)
-        if (timer) { clearTimeout(timer); this.autoCloseTimers.delete(ticketID) }
+        if (timer) {
+            clearTimeout(timer)
+            this.autoCloseTimers.delete(ticketID)
+        }
     }
 
     // ─── Auto-delete timer ────────────────────────────────────────────────
@@ -686,7 +853,10 @@ export class TicketsManager {
 
     private _clearDelete(ticketID: string) {
         const timer = this.deleteTimers.get(ticketID)
-        if (timer) { clearTimeout(timer); this.deleteTimers.delete(ticketID) }
+        if (timer) {
+            clearTimeout(timer)
+            this.deleteTimers.delete(ticketID)
+        }
     }
 
     // ─── Restore timers on startup ─────────────────────────────────────────
@@ -706,7 +876,9 @@ export class TicketsManager {
                         const elapsed = Date.now() - (ticket.lastActivityAt ?? ticket.createdAt)
                         const remaining = category.autoCloseAfter - elapsed
                         if (remaining <= 0) {
-                            this.closeTicket(ticket.id, this.client.user!.id, "Auto-closed due to inactivity").catch(noop)
+                            this.closeTicket(ticket.id, this.client.user!.id, "Auto-closed due to inactivity").catch(
+                                noop
+                            )
                         } else {
                             this._scheduleAutoClose(ticket, remaining)
                         }
@@ -723,7 +895,7 @@ export class TicketsManager {
         if (!settings.logChannelID) return
         const ch = this.client.channels.cache.get(settings.logChannelID) as TextChannel | undefined
         ch?.send({
-            embeds: [new EmbedBuilder().setDescription(message).setColor(color).setTimestamp()]
+            embeds: [new EmbedBuilder().setDescription(message).setColor(color).setTimestamp()],
         }).catch(noop)
     }
 

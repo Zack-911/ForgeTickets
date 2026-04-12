@@ -32,26 +32,33 @@ class TranscriptGenerator {
         if (!transcriptChannel)
             return;
         const opener = await channel.guild.members.fetch(ticket.openerID).catch(() => null);
-        await transcriptChannel.send({
+        await transcriptChannel
+            .send({
             content: `📄 Transcript for ticket **#${ticket.number}** (opened by ${opener?.displayName ?? ticket.openerID})`,
             files,
-        }).catch(noop_1.default);
+        })
+            .catch(noop_1.default);
     }
     // ─── HTML Transcript ───────────────────────────────────────────────────
     static _buildHTML(ticket, messages, category) {
-        const rows = messages.map(msg => {
+        const rows = messages
+            .map((msg) => {
             const avatar = msg.author.displayAvatarURL({ size: 32, extension: "webp" });
             const time = new Date(msg.createdTimestamp).toLocaleString();
             const content = this._escapeHTML(msg.content || "");
-            const attachments = msg.attachments.map((a) => a.contentType?.startsWith("image")
+            const attachments = msg.attachments
+                .map((a) => a.contentType?.startsWith("image")
                 ? `<img src="${a.url}" class="attachment-img" alt="attachment" />`
-                : `<a href="${a.url}" class="attachment-link" target="_blank">📎 ${this._escapeHTML(a.name)}</a>`).join("");
-            const embeds = msg.embeds.map((e) => `
-                <div class="embed" style="border-left-color: #${(e.color ?? 0x5865F2).toString(16).padStart(6, "0")}">
+                : `<a href="${a.url}" class="attachment-link" target="_blank">📎 ${this._escapeHTML(a.name)}</a>`)
+                .join("");
+            const embeds = msg.embeds
+                .map((e) => `
+                <div class="embed" style="border-left-color: #${(e.color ?? 0x5865f2).toString(16).padStart(6, "0")}">
                     ${e.title ? `<div class="embed-title">${this._escapeHTML(e.title)}</div>` : ""}
                     ${e.description ? `<div class="embed-desc">${this._escapeHTML(e.description)}</div>` : ""}
                     ${e.fields.map((f) => `<div class="embed-field"><b>${this._escapeHTML(f.name)}</b>: ${this._escapeHTML(f.value)}</div>`).join("")}
-                </div>`).join("");
+                </div>`)
+                .join("");
             return `
             <div class="message">
                 <img class="avatar" src="${avatar}" alt="" />
@@ -66,11 +73,15 @@ class TranscriptGenerator {
                     ${embeds}
                 </div>
             </div>`;
-        }).join("\n");
+        })
+            .join("\n");
         const openedAt = new Date(ticket.createdAt).toLocaleString();
         const closedAt = ticket.closedAt ? new Date(ticket.closedAt).toLocaleString() : "N/A";
         const formSection = ticket.formAnswers && Object.keys(ticket.formAnswers).length
-            ? `<div class="meta-section"><h3>📋 Form Answers</h3><table>${Object.entries(ticket.formAnswers).map(([k, v]) => `<tr><td><b>${this._escapeHTML(k)}</b></td><td>${this._escapeHTML(v)}</td></tr>`).join("")}</table></div>` : "";
+            ? `<div class="meta-section"><h3>📋 Form Answers</h3><table>${Object.entries(ticket.formAnswers)
+                .map(([k, v]) => `<tr><td><b>${this._escapeHTML(k)}</b></td><td>${this._escapeHTML(v)}</td></tr>`)
+                .join("")}</table></div>`
+            : "";
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -172,8 +183,11 @@ ${formSection}
     static async _fetchAllMessages(channel) {
         let all = new discord_js_1.Collection();
         let before;
-        for (let i = 0; i < 100; i++) { // cap at 10,000 messages
-            const batch = await channel.messages.fetch({ limit: 100, before }).catch(() => new discord_js_1.Collection());
+        for (let i = 0; i < 100; i++) {
+            // cap at 10,000 messages
+            const batch = await channel.messages
+                .fetch({ limit: 100, before })
+                .catch(() => new discord_js_1.Collection());
             if (!batch.size)
                 break;
             all = all.concat(batch);
@@ -182,11 +196,7 @@ ${formSection}
         return all;
     }
     static _escapeHTML(str) {
-        return str
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;");
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
     static _priorityColor(priority) {
         const map = { low: "57f287", medium: "fee75c", high: "e67e22", urgent: "ed4245" };

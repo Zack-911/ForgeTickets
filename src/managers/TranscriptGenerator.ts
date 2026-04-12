@@ -29,38 +29,49 @@ export class TranscriptGenerator {
 
         if (!files.length || !category.transcriptChannelID) return
 
-        const transcriptChannel = channel.guild.channels.cache.get(category.transcriptChannelID) as TextChannel | undefined
+        const transcriptChannel = channel.guild.channels.cache.get(category.transcriptChannelID) as
+            | TextChannel
+            | undefined
         if (!transcriptChannel) return
 
         const opener = await channel.guild.members.fetch(ticket.openerID).catch(() => null)
 
-        await transcriptChannel.send({
-            content: `📄 Transcript for ticket **#${ticket.number}** (opened by ${opener?.displayName ?? ticket.openerID})`,
-            files,
-        }).catch(noop)
+        await transcriptChannel
+            .send({
+                content: `📄 Transcript for ticket **#${ticket.number}** (opened by ${opener?.displayName ?? ticket.openerID})`,
+                files,
+            })
+            .catch(noop)
     }
 
     // ─── HTML Transcript ───────────────────────────────────────────────────
 
     private static _buildHTML(ticket: Ticket, messages: Message[], category: TicketCategory): string {
-        const rows = messages.map(msg => {
-            const avatar = msg.author.displayAvatarURL({ size: 32, extension: "webp" })
-            const time = new Date(msg.createdTimestamp).toLocaleString()
-            const content = this._escapeHTML(msg.content || "")
-            const attachments = msg.attachments.map((a: any) =>
-                a.contentType?.startsWith("image")
-                    ? `<img src="${a.url}" class="attachment-img" alt="attachment" />`
-                    : `<a href="${a.url}" class="attachment-link" target="_blank">📎 ${this._escapeHTML(a.name)}</a>`
-            ).join("")
+        const rows = messages
+            .map((msg) => {
+                const avatar = msg.author.displayAvatarURL({ size: 32, extension: "webp" })
+                const time = new Date(msg.createdTimestamp).toLocaleString()
+                const content = this._escapeHTML(msg.content || "")
+                const attachments = msg.attachments
+                    .map((a: any) =>
+                        a.contentType?.startsWith("image")
+                            ? `<img src="${a.url}" class="attachment-img" alt="attachment" />`
+                            : `<a href="${a.url}" class="attachment-link" target="_blank">📎 ${this._escapeHTML(a.name)}</a>`
+                    )
+                    .join("")
 
-            const embeds = msg.embeds.map((e: any) => `
-                <div class="embed" style="border-left-color: #${(e.color ?? 0x5865F2).toString(16).padStart(6, "0")}">
+                const embeds = msg.embeds
+                    .map(
+                        (e: any) => `
+                <div class="embed" style="border-left-color: #${(e.color ?? 0x5865f2).toString(16).padStart(6, "0")}">
                     ${e.title ? `<div class="embed-title">${this._escapeHTML(e.title)}</div>` : ""}
                     ${e.description ? `<div class="embed-desc">${this._escapeHTML(e.description)}</div>` : ""}
                     ${e.fields.map((f: any) => `<div class="embed-field"><b>${this._escapeHTML(f.name)}</b>: ${this._escapeHTML(f.value)}</div>`).join("")}
-                </div>`).join("")
+                </div>`
+                    )
+                    .join("")
 
-            return `
+                return `
             <div class="message">
                 <img class="avatar" src="${avatar}" alt="" />
                 <div class="message-body">
@@ -74,12 +85,17 @@ export class TranscriptGenerator {
                     ${embeds}
                 </div>
             </div>`
-        }).join("\n")
+            })
+            .join("\n")
 
         const openedAt = new Date(ticket.createdAt).toLocaleString()
         const closedAt = ticket.closedAt ? new Date(ticket.closedAt).toLocaleString() : "N/A"
-        const formSection = ticket.formAnswers && Object.keys(ticket.formAnswers).length
-            ? `<div class="meta-section"><h3>📋 Form Answers</h3><table>${Object.entries(ticket.formAnswers).map(([k, v]) => `<tr><td><b>${this._escapeHTML(k)}</b></td><td>${this._escapeHTML(v)}</td></tr>`).join("")}</table></div>` : ""
+        const formSection =
+            ticket.formAnswers && Object.keys(ticket.formAnswers).length
+                ? `<div class="meta-section"><h3>📋 Form Answers</h3><table>${Object.entries(ticket.formAnswers)
+                      .map(([k, v]) => `<tr><td><b>${this._escapeHTML(k)}</b></td><td>${this._escapeHTML(v)}</td></tr>`)
+                      .join("")}</table></div>`
+                : ""
 
         return `<!DOCTYPE html>
 <html lang="en">
@@ -168,7 +184,9 @@ ${formSection}
 
         for (const msg of messages) {
             const ts = new Date(msg.createdTimestamp).toLocaleString()
-            lines.push(`[${ts}] ${msg.author.username}${msg.author.bot ? " [BOT]" : ""}: ${msg.content || "(no content)"}`)
+            lines.push(
+                `[${ts}] ${msg.author.username}${msg.author.bot ? " [BOT]" : ""}: ${msg.content || "(no content)"}`
+            )
             for (const embed of msg.embeds) {
                 if (embed.title) lines.push(`  [EMBED] ${embed.title}`)
                 if (embed.description) lines.push(`  ${embed.description}`)
@@ -187,8 +205,11 @@ ${formSection}
         let all = new Collection<string, Message>()
         let before: string | undefined
 
-        for (let i = 0; i < 100; i++) {  // cap at 10,000 messages
-            const batch = await channel.messages.fetch({ limit: 100, before }).catch(() => new Collection<string, Message>())
+        for (let i = 0; i < 100; i++) {
+            // cap at 10,000 messages
+            const batch = await channel.messages
+                .fetch({ limit: 100, before })
+                .catch(() => new Collection<string, Message>())
             if (!batch.size) break
             all = all.concat(batch)
             before = batch.last()?.id
@@ -198,11 +219,7 @@ ${formSection}
     }
 
     private static _escapeHTML(str: string): string {
-        return str
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
     }
 
     private static _priorityColor(priority: string): string {

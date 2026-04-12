@@ -13,9 +13,9 @@ export interface IForgeTicketsOptions {
 }
 
 export class ForgeTickets extends ForgeExtension {
-    name        = "forge.tickets"
+    name = "forge.tickets"
     description = "A powerful, fully-featured ticket system for ForgeScript."
-    version     = require("../package.json").version as string
+    version = require("../package.json").version as string
     requireExtensions = ["forge.db"]
 
     public client!: ForgeClient
@@ -30,14 +30,23 @@ export class ForgeTickets extends ForgeExtension {
     async init(client: ForgeClient): Promise<void> {
         this.client = client
         this.commands = new TicketsCommandManager(client)
+
         EventManager.load("ForgeTicketsEvents", path.join(__dirname, "./events"))
-        this.load(path.join(__dirname, "./native"))
-        new TicketsInteractionHandler(client)
-        await new TicketsDatabase(this.emitter).init()
-        this.ticketsManager = new TicketsManager(client, this.emitter)
+
         if (this.options.events?.length) {
-            client.events.load("ForgeTicketsEvents", this.options.events)
+            this.client.events.load("ForgeTicketsEvents", this.options.events)
         }
+
+        this.load(path.join(__dirname, "./native"))
+        console.log("uwu")
+        const db = new TicketsDatabase(this.emitter)
+        console.log(":3")
+        await db.init()
+        console.log("hello")
+        new TicketsInteractionHandler(client)
+        console.log("hiya")
+        this.ticketsManager = new TicketsManager(client, this.emitter)
+        console.log("uwu")
     }
 }
 

@@ -50,12 +50,14 @@ class TicketsManager {
             : `ticket-${String(settings.totalTickets).padStart(4, "0")}`;
         // Create the ticket channel
         const parentID = category?.parentChannelID;
-        const channel = await guild.channels.create({
+        const channel = await guild.channels
+            .create({
             name: channelName,
             type: discord_js_1.ChannelType.GuildText,
             parent: parentID ?? undefined,
             permissionOverwrites: this._buildPermissions(guild.id, openerID, category, team),
-        }).catch(noop_1.default);
+        })
+            .catch(noop_1.default);
         if (!channel)
             return null;
         // Create ticket entity
@@ -84,24 +86,27 @@ class TicketsManager {
         await this._sendOpenEmbed(channel, ticket, category, team, member);
         // Ping team if enabled
         if (team?.pingOnOpen) {
-            const mentions = [
-                ...team.roles.map(r => `<@&${r}>`),
-                ...team.members.map(m => `<@${m}>`),
-            ].join(" ");
+            const mentions = [...team.roles.map((r) => `<@&${r}>`), ...team.members.map((m) => `<@${m}>`)].join(" ");
             if (mentions)
-                await channel.send({ content: mentions, flags: discord_js_1.MessageFlags.SuppressNotifications }).catch(noop_1.default);
+                await channel
+                    .send({ content: mentions, flags: discord_js_1.MessageFlags.SuppressNotifications })
+                    .catch(noop_1.default);
         }
         // Ping global staff
         if (settings.globalStaffRoles.length) {
-            const mentions = settings.globalStaffRoles.map(r => `<@&${r}>`).join(" ");
+            const mentions = settings.globalStaffRoles.map((r) => `<@&${r}>`).join(" ");
             if (mentions)
-                await channel.send({ content: mentions, flags: discord_js_1.MessageFlags.SuppressNotifications }).catch(noop_1.default);
+                await channel
+                    .send({ content: mentions, flags: discord_js_1.MessageFlags.SuppressNotifications })
+                    .catch(noop_1.default);
         }
         this.emitter.emit("ticketOpen", ticket);
         // DM opener
         if (settings.dmOnOpen) {
             const user = await this.client.users.fetch(openerID).catch(noop_1.default);
-            user?.send({ content: `✅ Your ticket **#${ticket.number}** has been created in **${guild.name}**: <#${channel.id}>` }).catch(noop_1.default);
+            user?.send({
+                content: `✅ Your ticket **#${ticket.number}** has been created in **${guild.name}**: <#${channel.id}>`,
+            }).catch(noop_1.default);
         }
         // Start SLA timer
         if (category?.sla) {
@@ -112,7 +117,7 @@ class TicketsManager {
             this._scheduleAutoClose(ticket, category.autoCloseAfter);
         }
         // Log event
-        await this._log(guildID, `🎫 Ticket **#${ticket.number}** opened by <@${openerID}>${category ? ` in **${category.name}**` : ""}`, 0x57F287);
+        await this._log(guildID, `🎫 Ticket **#${ticket.number}** opened by <@${openerID}>${category ? ` in **${category.name}**` : ""}`, 0x57f287);
         return ticket;
     }
     // ─── Close ────────────────────────────────────────────────────────────
@@ -145,12 +150,14 @@ class TicketsManager {
         const settings = await database_1.TicketsDatabase.getSettings(ticket.guildID);
         if (settings.dmOnClose) {
             const opener = await this.client.users.fetch(ticket.openerID).catch(noop_1.default);
-            opener?.send({ content: `📬 Your ticket **#${ticket.number}** has been closed. Reason: ${reason ?? "None"}` }).catch(noop_1.default);
+            opener
+                ?.send({ content: `📬 Your ticket **#${ticket.number}** has been closed. Reason: ${reason ?? "None"}` })
+                .catch(noop_1.default);
         }
         if (category?.deleteAfter && category.deleteAfter > 0) {
             this._scheduleDelete(ticket, category.deleteAfter);
         }
-        await this._log(ticket.guildID, `🔒 Ticket **#${ticket.number}** closed by <@${closedBy}>${reason ? `. Reason: ${reason}` : ""}`, 0xED4245);
+        await this._log(ticket.guildID, `🔒 Ticket **#${ticket.number}** closed by <@${closedBy}>${reason ? `. Reason: ${reason}` : ""}`, 0xed4245);
         return ticket;
     }
     // ─── Claim ────────────────────────────────────────────────────────────
@@ -166,13 +173,16 @@ class TicketsManager {
         const channel = this.client.channels.cache.get(ticket.channelID);
         if (channel) {
             await channel.permissionOverwrites.edit(claimedBy, { SendMessages: true, ViewChannel: true }).catch(noop_1.default);
-            await channel.send({
-                embeds: [new discord_js_1.EmbedBuilder()
+            await channel
+                .send({
+                embeds: [
+                    new discord_js_1.EmbedBuilder()
                         .setDescription(`🎯 This ticket has been claimed by <@${claimedBy}>.`)
-                        .setColor(0x5865F2)
-                        .setTimestamp()
-                ]
-            }).catch(noop_1.default);
+                        .setColor(0x5865f2)
+                        .setTimestamp(),
+                ],
+            })
+                .catch(noop_1.default);
         }
         this.emitter.emit("ticketClaim", ticket, claimedBy);
         // Reset SLA response timer — first response happened
@@ -181,7 +191,7 @@ class TicketsManager {
             await database_1.TicketsDatabase.saveTicket(ticket);
             this.slaManager.markFirstResponse(ticketID);
         }
-        await this._log(ticket.guildID, `🎯 Ticket **#${ticket.number}** claimed by <@${claimedBy}>`, 0x5865F2);
+        await this._log(ticket.guildID, `🎯 Ticket **#${ticket.number}** claimed by <@${claimedBy}>`, 0x5865f2);
         return ticket;
     }
     // ─── Unclaim ──────────────────────────────────────────────────────────
@@ -198,16 +208,19 @@ class TicketsManager {
         if (channel) {
             if (prev)
                 await channel.permissionOverwrites.delete(prev).catch(noop_1.default);
-            await channel.send({
-                embeds: [new discord_js_1.EmbedBuilder()
+            await channel
+                .send({
+                embeds: [
+                    new discord_js_1.EmbedBuilder()
                         .setDescription(`↩️ This ticket has been unclaimed by <@${unclaimedBy}>.`)
-                        .setColor(0xFEE75C)
-                        .setTimestamp()
-                ]
-            }).catch(noop_1.default);
+                        .setColor(0xfee75c)
+                        .setTimestamp(),
+                ],
+            })
+                .catch(noop_1.default);
         }
         this.emitter.emit("ticketUnclaim", ticket, unclaimedBy);
-        await this._log(ticket.guildID, `↩️ Ticket **#${ticket.number}** unclaimed by <@${unclaimedBy}>`, 0xFEE75C);
+        await this._log(ticket.guildID, `↩️ Ticket **#${ticket.number}** unclaimed by <@${unclaimedBy}>`, 0xfee75c);
         return ticket;
     }
     // ─── Lock ─────────────────────────────────────────────────────────────
@@ -223,16 +236,19 @@ class TicketsManager {
             const opener = await this.client.users.fetch(ticket.openerID).catch(noop_1.default);
             if (opener)
                 await channel.permissionOverwrites.edit(opener, { SendMessages: false }).catch(noop_1.default);
-            await channel.send({
-                embeds: [new discord_js_1.EmbedBuilder()
+            await channel
+                .send({
+                embeds: [
+                    new discord_js_1.EmbedBuilder()
                         .setDescription(`🔐 This ticket has been locked by <@${lockedBy}>. The opener can no longer send messages.`)
-                        .setColor(0xED4245)
-                        .setTimestamp()
-                ]
-            }).catch(noop_1.default);
+                        .setColor(0xed4245)
+                        .setTimestamp(),
+                ],
+            })
+                .catch(noop_1.default);
         }
         this.emitter.emit("ticketLock", ticket, lockedBy);
-        await this._log(ticket.guildID, `🔐 Ticket **#${ticket.number}** locked by <@${lockedBy}>`, 0xED4245);
+        await this._log(ticket.guildID, `🔐 Ticket **#${ticket.number}** locked by <@${lockedBy}>`, 0xed4245);
         return ticket;
     }
     // ─── Unlock ───────────────────────────────────────────────────────────
@@ -248,16 +264,19 @@ class TicketsManager {
             const opener = await this.client.users.fetch(ticket.openerID).catch(noop_1.default);
             if (opener)
                 await channel.permissionOverwrites.edit(opener, { SendMessages: true }).catch(noop_1.default);
-            await channel.send({
-                embeds: [new discord_js_1.EmbedBuilder()
+            await channel
+                .send({
+                embeds: [
+                    new discord_js_1.EmbedBuilder()
                         .setDescription(`🔓 This ticket has been unlocked by <@${unlockedBy}>.`)
-                        .setColor(0x57F287)
-                        .setTimestamp()
-                ]
-            }).catch(noop_1.default);
+                        .setColor(0x57f287)
+                        .setTimestamp(),
+                ],
+            })
+                .catch(noop_1.default);
         }
         this.emitter.emit("ticketUnlock", ticket, unlockedBy);
-        await this._log(ticket.guildID, `🔓 Ticket **#${ticket.number}** unlocked by <@${unlockedBy}>`, 0x57F287);
+        await this._log(ticket.guildID, `🔓 Ticket **#${ticket.number}** unlocked by <@${unlockedBy}>`, 0x57f287);
         return ticket;
     }
     // ─── Reopen ───────────────────────────────────────────────────────────
@@ -277,13 +296,16 @@ class TicketsManager {
             const opener = await this.client.users.fetch(ticket.openerID).catch(noop_1.default);
             if (opener)
                 await channel.permissionOverwrites.edit(opener, { SendMessages: true, ViewChannel: true }).catch(noop_1.default);
-            await channel.send({
-                embeds: [new discord_js_1.EmbedBuilder()
+            await channel
+                .send({
+                embeds: [
+                    new discord_js_1.EmbedBuilder()
                         .setDescription(`🔄 This ticket has been reopened by <@${reopenedBy}>.`)
-                        .setColor(0x57F287)
-                        .setTimestamp()
-                ]
-            }).catch(noop_1.default);
+                        .setColor(0x57f287)
+                        .setTimestamp(),
+                ],
+            })
+                .catch(noop_1.default);
         }
         this.emitter.emit("ticketReopen", ticket);
         // Restart SLA if applicable
@@ -293,7 +315,7 @@ class TicketsManager {
         if (category?.autoCloseAfter && category.autoCloseAfter > 0) {
             this._scheduleAutoClose(ticket, category.autoCloseAfter);
         }
-        await this._log(ticket.guildID, `🔄 Ticket **#${ticket.number}** reopened by <@${reopenedBy}>`, 0x57F287);
+        await this._log(ticket.guildID, `🔄 Ticket **#${ticket.number}** reopened by <@${reopenedBy}>`, 0x57f287);
         return ticket;
     }
     // ─── Delete ───────────────────────────────────────────────────────────
@@ -309,7 +331,7 @@ class TicketsManager {
         this._clearAutoClose(ticketID);
         this._clearDelete(ticketID);
         this.emitter.emit("ticketDelete", ticket);
-        await this._log(ticket.guildID, `🗑️ Ticket **#${ticket.number}** deleted (opened by <@${ticket.openerID}>)`, 0xEB459E);
+        await this._log(ticket.guildID, `🗑️ Ticket **#${ticket.number}** deleted (opened by <@${ticket.openerID}>)`, 0xeb459e);
         return true;
     }
     // ─── Transfer ─────────────────────────────────────────────────────────
@@ -333,16 +355,19 @@ class TicketsManager {
             for (const [id, perms] of overwrites) {
                 await channel.permissionOverwrites.edit(id, perms).catch(noop_1.default);
             }
-            await channel.send({
-                embeds: [new discord_js_1.EmbedBuilder()
+            await channel
+                .send({
+                embeds: [
+                    new discord_js_1.EmbedBuilder()
                         .setDescription(`↗️ This ticket has been transferred to **${newTeam.name}**.`)
-                        .setColor(0x5865F2)
-                        .setTimestamp()
-                ]
-            }).catch(noop_1.default);
+                        .setColor(0x5865f2)
+                        .setTimestamp(),
+                ],
+            })
+                .catch(noop_1.default);
         }
         this.emitter.emit("ticketTransfer", ticket, oldTeamID, newTeamID);
-        await this._log(ticket.guildID, `↗️ Ticket **#${ticket.number}** transferred to team **${newTeam.name}**`, 0x5865F2);
+        await this._log(ticket.guildID, `↗️ Ticket **#${ticket.number}** transferred to team **${newTeam.name}**`, 0x5865f2);
         return ticket;
     }
     // ─── Add/Remove Participant ────────────────────────────────────────────
@@ -355,7 +380,9 @@ class TicketsManager {
         await database_1.TicketsDatabase.saveTicket(ticket);
         const channel = this.client.channels.cache.get(ticket.channelID);
         if (channel) {
-            await channel.permissionOverwrites.edit(userID, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true }).catch(noop_1.default);
+            await channel.permissionOverwrites
+                .edit(userID, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true })
+                .catch(noop_1.default);
         }
         return ticket;
     }
@@ -363,7 +390,7 @@ class TicketsManager {
         const ticket = await database_1.TicketsDatabase.getTicket(ticketID);
         if (!ticket)
             return null;
-        ticket.participants = ticket.participants.filter(p => p !== userID);
+        ticket.participants = ticket.participants.filter((p) => p !== userID);
         ticket.touch();
         await database_1.TicketsDatabase.saveTicket(ticket);
         const channel = this.client.channels.cache.get(ticket.channelID);
@@ -386,7 +413,7 @@ class TicketsManager {
         const ticket = await database_1.TicketsDatabase.getTicket(ticketID);
         if (!ticket)
             return null;
-        ticket.tags = ticket.tags.filter(t => t !== tag);
+        ticket.tags = ticket.tags.filter((t) => t !== tag);
         await database_1.TicketsDatabase.saveTicket(ticket);
         this.emitter.emit("ticketTagRemove", ticket, tag);
         return ticket;
@@ -400,7 +427,7 @@ class TicketsManager {
         ticket.priority = priority;
         await database_1.TicketsDatabase.saveTicket(ticket);
         this.emitter.emit("ticketPriorityChange", ticket, old, priority);
-        await this._log(ticket.guildID, `⚡ Ticket **#${ticket.number}** priority changed from **${old}** to **${priority}**`, 0xFEE75C);
+        await this._log(ticket.guildID, `⚡ Ticket **#${ticket.number}** priority changed from **${old}** to **${priority}**`, 0xfee75c);
         return ticket;
     }
     // ─── Notes ────────────────────────────────────────────────────────────
@@ -423,7 +450,7 @@ class TicketsManager {
                 // Keyword matching against subject
                 if (rule.keywords?.length && subject) {
                     const lc = subject.toLowerCase();
-                    if (rule.keywords.some(kw => lc.includes(kw.toLowerCase()))) {
+                    if (rule.keywords.some((kw) => lc.includes(kw.toLowerCase()))) {
                         return rule.targetTeamID;
                     }
                 }
@@ -455,28 +482,68 @@ class TicketsManager {
             // Deny @everyone
             { id: guildID, deny: [discord_js_1.PermissionsBitField.Flags.ViewChannel] },
             // Allow opener
-            { id: openerID, allow: [discord_js_1.PermissionsBitField.Flags.ViewChannel, discord_js_1.PermissionsBitField.Flags.SendMessages, discord_js_1.PermissionsBitField.Flags.ReadMessageHistory, discord_js_1.PermissionsBitField.Flags.AttachFiles] },
+            {
+                id: openerID,
+                allow: [
+                    discord_js_1.PermissionsBitField.Flags.ViewChannel,
+                    discord_js_1.PermissionsBitField.Flags.SendMessages,
+                    discord_js_1.PermissionsBitField.Flags.ReadMessageHistory,
+                    discord_js_1.PermissionsBitField.Flags.AttachFiles,
+                ],
+            },
         ];
         // Category staff roles
         if (category?.staffRoles) {
             for (const role of category.staffRoles) {
-                base.push({ id: role, allow: [discord_js_1.PermissionsBitField.Flags.ViewChannel, discord_js_1.PermissionsBitField.Flags.SendMessages, discord_js_1.PermissionsBitField.Flags.ReadMessageHistory, discord_js_1.PermissionsBitField.Flags.ManageMessages, discord_js_1.PermissionsBitField.Flags.AttachFiles] });
+                base.push({
+                    id: role,
+                    allow: [
+                        discord_js_1.PermissionsBitField.Flags.ViewChannel,
+                        discord_js_1.PermissionsBitField.Flags.SendMessages,
+                        discord_js_1.PermissionsBitField.Flags.ReadMessageHistory,
+                        discord_js_1.PermissionsBitField.Flags.ManageMessages,
+                        discord_js_1.PermissionsBitField.Flags.AttachFiles,
+                    ],
+                });
             }
         }
         // Team roles and members
         if (team) {
             for (const role of team.roles) {
-                base.push({ id: role, allow: [discord_js_1.PermissionsBitField.Flags.ViewChannel, discord_js_1.PermissionsBitField.Flags.SendMessages, discord_js_1.PermissionsBitField.Flags.ReadMessageHistory, discord_js_1.PermissionsBitField.Flags.ManageMessages, discord_js_1.PermissionsBitField.Flags.AttachFiles] });
+                base.push({
+                    id: role,
+                    allow: [
+                        discord_js_1.PermissionsBitField.Flags.ViewChannel,
+                        discord_js_1.PermissionsBitField.Flags.SendMessages,
+                        discord_js_1.PermissionsBitField.Flags.ReadMessageHistory,
+                        discord_js_1.PermissionsBitField.Flags.ManageMessages,
+                        discord_js_1.PermissionsBitField.Flags.AttachFiles,
+                    ],
+                });
             }
             for (const member of team.members) {
-                base.push({ id: member, allow: [discord_js_1.PermissionsBitField.Flags.ViewChannel, discord_js_1.PermissionsBitField.Flags.SendMessages, discord_js_1.PermissionsBitField.Flags.ReadMessageHistory, discord_js_1.PermissionsBitField.Flags.ManageMessages, discord_js_1.PermissionsBitField.Flags.AttachFiles] });
+                base.push({
+                    id: member,
+                    allow: [
+                        discord_js_1.PermissionsBitField.Flags.ViewChannel,
+                        discord_js_1.PermissionsBitField.Flags.SendMessages,
+                        discord_js_1.PermissionsBitField.Flags.ReadMessageHistory,
+                        discord_js_1.PermissionsBitField.Flags.ManageMessages,
+                        discord_js_1.PermissionsBitField.Flags.AttachFiles,
+                    ],
+                });
             }
         }
         return base;
     }
     async _buildTeamOverwrites(team) {
         const map = new Map();
-        const allow = [discord_js_1.PermissionsBitField.Flags.ViewChannel, discord_js_1.PermissionsBitField.Flags.SendMessages, discord_js_1.PermissionsBitField.Flags.ReadMessageHistory, discord_js_1.PermissionsBitField.Flags.ManageMessages];
+        const allow = [
+            discord_js_1.PermissionsBitField.Flags.ViewChannel,
+            discord_js_1.PermissionsBitField.Flags.SendMessages,
+            discord_js_1.PermissionsBitField.Flags.ReadMessageHistory,
+            discord_js_1.PermissionsBitField.Flags.ManageMessages,
+        ];
         for (const role of team.roles)
             map.set(role, { allow });
         for (const member of team.members)
@@ -488,10 +555,15 @@ class TicketsManager {
         const embedDef = category?.openEmbed;
         const embed = new discord_js_1.EmbedBuilder()
             .setTitle(embedDef?.title ?? `🎫 Ticket #${ticket.number}`)
-            .setDescription(embedDef?.description ?? `Hello <@${ticket.openerID}>, welcome to your ticket!\nSupport staff will be with you shortly. Please describe your issue in detail.`)
-            .setColor(embedDef?.color ?? 0x5865F2)
+            .setDescription(embedDef?.description ??
+            `Hello <@${ticket.openerID}>, welcome to your ticket!\nSupport staff will be with you shortly. Please describe your issue in detail.`)
+            .setColor(embedDef?.color ?? 0x5865f2)
             .setTimestamp()
-            .addFields({ name: "Category", value: category?.name ?? "General", inline: true }, { name: "Priority", value: `${this._priorityEmoji(ticket.priority)} ${ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}`, inline: true }, { name: "Opened by", value: `<@${ticket.openerID}>`, inline: true });
+            .addFields({ name: "Category", value: category?.name ?? "General", inline: true }, {
+            name: "Priority",
+            value: `${this._priorityEmoji(ticket.priority)} ${ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}`,
+            inline: true,
+        }, { name: "Opened by", value: `<@${ticket.openerID}>`, inline: true });
         if (embedDef?.footerText)
             embed.setFooter({ text: embedDef.footerText, iconURL: embedDef.footerIconURL });
         if (embedDef?.thumbnailURL)
@@ -500,9 +572,11 @@ class TicketsManager {
             embed.setImage(embedDef.imageURL);
         // Show form answers in embed
         if (ticket.formAnswers && Object.keys(ticket.formAnswers).length) {
-            const category_ = ticket.categoryID ? await database_1.TicketsDatabase.getCategory(ticket.categoryID).catch(() => null) : null;
+            const category_ = ticket.categoryID
+                ? await database_1.TicketsDatabase.getCategory(ticket.categoryID).catch(() => null)
+                : null;
             for (const [key, value] of Object.entries(ticket.formAnswers)) {
-                const fieldDef = category_?.form?.find(f => f.key === key);
+                const fieldDef = category_?.form?.find((f) => f.key === key);
                 embed.addFields({ name: fieldDef?.label ?? key, value: value || "N/A", inline: false });
             }
         }
@@ -510,9 +584,25 @@ class TicketsManager {
             embed.addFields({ name: "Assigned Team", value: team.name, inline: true });
         // SLA footer note
         if (category?.sla?.responseTime) {
-            embed.addFields({ name: "⏱️ Response SLA", value: `${this._formatDuration(category.sla.responseTime)}`, inline: true });
+            embed.addFields({
+                name: "⏱️ Response SLA",
+                value: `${this._formatDuration(category.sla.responseTime)}`,
+                inline: true,
+            });
         }
-        const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId((0, TicketsInteractionHandler_1.encodeCID)(TicketsInteractionHandler_1.CID.TICKET_CLOSE, ticket.id)).setLabel("Close").setEmoji("🔒").setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId((0, TicketsInteractionHandler_1.encodeCID)(TicketsInteractionHandler_1.CID.TICKET_CLAIM, ticket.id)).setLabel("Claim").setEmoji("🎯").setStyle(discord_js_1.ButtonStyle.Primary), new discord_js_1.ButtonBuilder().setCustomId((0, TicketsInteractionHandler_1.encodeCID)(TicketsInteractionHandler_1.CID.TICKET_LOCK, ticket.id)).setLabel("Lock").setEmoji("🔐").setStyle(discord_js_1.ButtonStyle.Secondary));
+        const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder()
+            .setCustomId((0, TicketsInteractionHandler_1.encodeCID)(TicketsInteractionHandler_1.CID.TICKET_CLOSE, ticket.id))
+            .setLabel("Close")
+            .setEmoji("🔒")
+            .setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder()
+            .setCustomId((0, TicketsInteractionHandler_1.encodeCID)(TicketsInteractionHandler_1.CID.TICKET_CLAIM, ticket.id))
+            .setLabel("Claim")
+            .setEmoji("🎯")
+            .setStyle(discord_js_1.ButtonStyle.Primary), new discord_js_1.ButtonBuilder()
+            .setCustomId((0, TicketsInteractionHandler_1.encodeCID)(TicketsInteractionHandler_1.CID.TICKET_LOCK, ticket.id))
+            .setLabel("Lock")
+            .setEmoji("🔐")
+            .setStyle(discord_js_1.ButtonStyle.Secondary));
         await channel.send({ embeds: [embed], components: [row] }).catch(noop_1.default);
     }
     async _sendCloseEmbed(channel, ticket, category, closedBy) {
@@ -520,15 +610,31 @@ class TicketsManager {
         const embed = new discord_js_1.EmbedBuilder()
             .setTitle(embedDef?.title ?? `🔒 Ticket Closed`)
             .setDescription(embedDef?.description ?? `This ticket has been closed by <@${closedBy}>.`)
-            .setColor(embedDef?.color ?? 0xED4245)
+            .setColor(embedDef?.color ?? 0xed4245)
             .setTimestamp()
             .addFields({ name: "Ticket #", value: `${ticket.number}`, inline: true }, { name: "Opened by", value: `<@${ticket.openerID}>`, inline: true }, { name: "Closed by", value: `<@${closedBy}>`, inline: true }, { name: "Close reason", value: ticket.closeReason ?? "None", inline: false });
         if (ticket.slaStatus) {
-            embed.addFields({ name: "First Response", value: ticket.slaStatus.firstResponseAt ? (0, discord_js_1.time)(new Date(ticket.slaStatus.firstResponseAt)) : "N/A", inline: true }, { name: "SLA Breached", value: (ticket.slaStatus.responseBreached || ticket.slaStatus.resolutionBreached) ? "⚠️ Yes" : "✅ No", inline: true });
+            embed.addFields({
+                name: "First Response",
+                value: ticket.slaStatus.firstResponseAt ? (0, discord_js_1.time)(new Date(ticket.slaStatus.firstResponseAt)) : "N/A",
+                inline: true,
+            }, {
+                name: "SLA Breached",
+                value: ticket.slaStatus.responseBreached || ticket.slaStatus.resolutionBreached ? "⚠️ Yes" : "✅ No",
+                inline: true,
+            });
         }
         if (embedDef?.footerText)
             embed.setFooter({ text: embedDef.footerText, iconURL: embedDef.footerIconURL });
-        const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId((0, TicketsInteractionHandler_1.encodeCID)(TicketsInteractionHandler_1.CID.TICKET_REOPEN, ticket.id)).setLabel("Reopen").setEmoji("🔄").setStyle(discord_js_1.ButtonStyle.Success), new discord_js_1.ButtonBuilder().setCustomId((0, TicketsInteractionHandler_1.encodeCID)(TicketsInteractionHandler_1.CID.TICKET_DELETE, ticket.id)).setLabel("Delete").setEmoji("🗑️").setStyle(discord_js_1.ButtonStyle.Danger));
+        const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder()
+            .setCustomId((0, TicketsInteractionHandler_1.encodeCID)(TicketsInteractionHandler_1.CID.TICKET_REOPEN, ticket.id))
+            .setLabel("Reopen")
+            .setEmoji("🔄")
+            .setStyle(discord_js_1.ButtonStyle.Success), new discord_js_1.ButtonBuilder()
+            .setCustomId((0, TicketsInteractionHandler_1.encodeCID)(TicketsInteractionHandler_1.CID.TICKET_DELETE, ticket.id))
+            .setLabel("Delete")
+            .setEmoji("🗑️")
+            .setStyle(discord_js_1.ButtonStyle.Danger));
         await channel.send({ embeds: [embed], components: [row] }).catch(noop_1.default);
     }
     // ─── Auto-close timer ─────────────────────────────────────────────────
@@ -602,7 +708,7 @@ class TicketsManager {
             return;
         const ch = this.client.channels.cache.get(settings.logChannelID);
         ch?.send({
-            embeds: [new discord_js_1.EmbedBuilder().setDescription(message).setColor(color).setTimestamp()]
+            embeds: [new discord_js_1.EmbedBuilder().setDescription(message).setColor(color).setTimestamp()],
         }).catch(noop_1.default);
     }
     // ─── Helpers ──────────────────────────────────────────────────────────

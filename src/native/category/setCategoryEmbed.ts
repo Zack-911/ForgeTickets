@@ -25,7 +25,8 @@ export default new NativeFunction({
         },
         {
             name: "embedJSON",
-            description: "Embed config as JSON {title,description,color,thumbnailURL,imageURL,footerText,footerIconURL}",
+            description:
+                "Embed config as JSON {title,description,color,thumbnailURL,imageURL,footerText,footerIconURL}",
             type: ArgType.Json,
             required: true,
             rest: false,

@@ -440,7 +440,7 @@ let Ticket = class Ticket {
     }
     /** Returns whether the ticket is currently considered active */
     isActive() {
-        return this.state === TicketState.Open || this.state === TicketState.Claimed || this.state === TicketState.Pending;
+        return (this.state === TicketState.Open || this.state === TicketState.Claimed || this.state === TicketState.Pending);
     }
 };
 exports.Ticket = Ticket;

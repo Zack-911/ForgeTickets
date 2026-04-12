@@ -75,18 +75,20 @@ class SLAManager {
         if (!ch)
             return;
         const label = type === "response" ? "Response SLA" : "Resolution SLA";
-        const mentions = config.alertRoles?.map(r => `<@&${r}>`).join(" ") ?? "";
-        await ch.send({
+        const mentions = config.alertRoles?.map((r) => `<@&${r}>`).join(" ") ?? "";
+        await ch
+            .send({
             content: mentions || undefined,
             embeds: [
                 new discord_js_1.EmbedBuilder()
                     .setTitle(`⚠️ SLA Breach — ${label}`)
                     .setDescription(`Ticket **#${ticket.number}** has breached its **${label}** deadline.`)
-                    .setColor(0xED4245)
+                    .setColor(0xed4245)
                     .addFields({ name: "Ticket", value: `<#${ticket.channelID}>`, inline: true }, { name: "Opener", value: `<@${ticket.openerID}>`, inline: true })
-                    .setTimestamp()
-            ]
-        }).catch(noop_1.default);
+                    .setTimestamp(),
+            ],
+        })
+            .catch(noop_1.default);
     }
 }
 exports.SLAManager = SLAManager;

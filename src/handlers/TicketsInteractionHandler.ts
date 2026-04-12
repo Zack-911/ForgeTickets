@@ -1,8 +1,13 @@
 import type { TextChannel, GuildMember } from "discord.js"
 import {
-    ActionRowBuilder, ButtonBuilder, ButtonStyle,
-    MessageFlags, ModalBuilder, TextInputBuilder,
-    TextInputStyle, PermissionsBitField,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    MessageFlags,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    PermissionsBitField,
 } from "discord.js"
 import { ForgeClient } from "@tryforge/forgescript"
 import { ForgeTickets } from ".."
@@ -13,15 +18,15 @@ import noop from "../functions/noop"
 
 /** Custom ID prefixes used throughout the button/modal system */
 export const CID = {
-    PANEL_OPEN:     "fticket_panel_open",    // fticket_panel_open:{categoryID}
-    TICKET_CLOSE:   "fticket_close",         // fticket_close:{ticketID}
-    TICKET_CLAIM:   "fticket_claim",         // fticket_claim:{ticketID}
-    TICKET_UNCLAIM: "fticket_unclaim",       // fticket_unclaim:{ticketID}
-    TICKET_LOCK:    "fticket_lock",          // fticket_lock:{ticketID}
-    TICKET_UNLOCK:  "fticket_unlock",        // fticket_unlock:{ticketID}
-    TICKET_REOPEN:  "fticket_reopen",        // fticket_reopen:{ticketID}
-    TICKET_DELETE:  "fticket_delete",        // fticket_delete:{ticketID}
-    FORM_SUBMIT:    "fticket_form",          // fticket_form:{categoryID}  (modal)
+    PANEL_OPEN: "fticket_panel_open", // fticket_panel_open:{categoryID}
+    TICKET_CLOSE: "fticket_close", // fticket_close:{ticketID}
+    TICKET_CLAIM: "fticket_claim", // fticket_claim:{ticketID}
+    TICKET_UNCLAIM: "fticket_unclaim", // fticket_unclaim:{ticketID}
+    TICKET_LOCK: "fticket_lock", // fticket_lock:{ticketID}
+    TICKET_UNLOCK: "fticket_unlock", // fticket_unlock:{ticketID}
+    TICKET_REOPEN: "fticket_reopen", // fticket_reopen:{ticketID}
+    TICKET_DELETE: "fticket_delete", // fticket_delete:{ticketID}
+    FORM_SUBMIT: "fticket_form", // fticket_form:{categoryID}  (modal)
 } as const
 
 function encode(prefix: string, ...parts: string[]) {
@@ -49,28 +54,28 @@ export class TicketsInteractionHandler {
 
                 switch (prefix) {
                     case CID.PANEL_OPEN:
-                        return void await this._handlePanelOpen(interaction, parts[0])
+                        return void (await this._handlePanelOpen(interaction, parts[0]))
 
                     case CID.TICKET_CLOSE:
-                        return void await this._handleClose(interaction, parts[0])
+                        return void (await this._handleClose(interaction, parts[0]))
 
                     case CID.TICKET_CLAIM:
-                        return void await this._handleClaim(interaction, parts[0])
+                        return void (await this._handleClaim(interaction, parts[0]))
 
                     case CID.TICKET_UNCLAIM:
-                        return void await this._handleUnclaim(interaction, parts[0])
+                        return void (await this._handleUnclaim(interaction, parts[0]))
 
                     case CID.TICKET_LOCK:
-                        return void await this._handleLock(interaction, parts[0])
+                        return void (await this._handleLock(interaction, parts[0]))
 
                     case CID.TICKET_UNLOCK:
-                        return void await this._handleUnlock(interaction, parts[0])
+                        return void (await this._handleUnlock(interaction, parts[0]))
 
                     case CID.TICKET_REOPEN:
-                        return void await this._handleReopen(interaction, parts[0])
+                        return void (await this._handleReopen(interaction, parts[0]))
 
                     case CID.TICKET_DELETE:
-                        return void await this._handleDelete(interaction, parts[0])
+                        return void (await this._handleDelete(interaction, parts[0]))
                 }
                 return
             }
@@ -80,7 +85,7 @@ export class TicketsInteractionHandler {
             if (interaction.isModalSubmit()) {
                 const [prefix, parts] = decode(interaction.customId)
                 if (prefix === CID.FORM_SUBMIT) {
-                    return void await this._handleFormSubmit(interaction, parts[0])
+                    return void (await this._handleFormSubmit(interaction, parts[0]))
                 }
             }
         })
@@ -94,7 +99,9 @@ export class TicketsInteractionHandler {
 
         const category = await TicketsDatabase.getCategory(categoryID)
         if (!category || !category.enabled) {
-            return interaction.reply({ content: "❌ This ticket category is currently unavailable.", flags: MessageFlags.Ephemeral }).catch(noop)
+            return interaction
+                .reply({ content: "❌ This ticket category is currently unavailable.", flags: MessageFlags.Ephemeral })
+                .catch(noop)
         }
 
         // Blacklist check
@@ -102,23 +109,43 @@ export class TicketsInteractionHandler {
         const bl = await TicketsDatabase.isBlacklisted(interaction.guildId, interaction.user.id, roleIDs)
         if (bl) {
             const reason = bl.reason ? ` Reason: ${bl.reason}` : ""
-            return interaction.reply({ content: `❌ You are blacklisted from opening tickets.${reason}`, flags: MessageFlags.Ephemeral }).catch(noop)
+            return interaction
+                .reply({
+                    content: `❌ You are blacklisted from opening tickets.${reason}`,
+                    flags: MessageFlags.Ephemeral,
+                })
+                .catch(noop)
         }
 
         // Role restriction check
-        if (category.blockedRoles?.some(r => roleIDs.includes(r))) {
-            return interaction.reply({ content: "❌ You do not have permission to open tickets in this category.", flags: MessageFlags.Ephemeral }).catch(noop)
+        if (category.blockedRoles?.some((r) => roleIDs.includes(r))) {
+            return interaction
+                .reply({
+                    content: "❌ You do not have permission to open tickets in this category.",
+                    flags: MessageFlags.Ephemeral,
+                })
+                .catch(noop)
         }
-        if (category.allowedRoles?.length && !category.allowedRoles.some(r => roleIDs.includes(r))) {
-            return interaction.reply({ content: "❌ You do not have the required roles to open tickets in this category.", flags: MessageFlags.Ephemeral }).catch(noop)
+        if (category.allowedRoles?.length && !category.allowedRoles.some((r) => roleIDs.includes(r))) {
+            return interaction
+                .reply({
+                    content: "❌ You do not have the required roles to open tickets in this category.",
+                    flags: MessageFlags.Ephemeral,
+                })
+                .catch(noop)
         }
 
         // Max-per-user check
         if (category.maxPerUser > 0) {
             const open = await TicketsDatabase.getOpenTicketsByUser(interaction.guildId, interaction.user.id)
-            const inCategory = open.filter(t => t.categoryID === categoryID)
+            const inCategory = open.filter((t) => t.categoryID === categoryID)
             if (inCategory.length >= category.maxPerUser) {
-                return interaction.reply({ content: `❌ You already have ${inCategory.length} open ticket(s) in this category (max: ${category.maxPerUser}).`, flags: MessageFlags.Ephemeral }).catch(noop)
+                return interaction
+                    .reply({
+                        content: `❌ You already have ${inCategory.length} open ticket(s) in this category (max: ${category.maxPerUser}).`,
+                        flags: MessageFlags.Ephemeral,
+                    })
+                    .catch(noop)
             }
         }
 
@@ -135,8 +162,8 @@ export class TicketsInteractionHandler {
                     .setStyle(field.style === "paragraph" ? TextInputStyle.Paragraph : TextInputStyle.Short)
                     .setRequired(field.required)
                 if (field.placeholder) input.setPlaceholder(field.placeholder)
-                if (field.minLength)   input.setMinLength(field.minLength)
-                if (field.maxLength)   input.setMaxLength(field.maxLength)
+                if (field.minLength) input.setMinLength(field.minLength)
+                if (field.maxLength) input.setMaxLength(field.maxLength)
                 modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input))
             }
 
@@ -145,15 +172,19 @@ export class TicketsInteractionHandler {
 
         // No form — open immediately
         await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(noop)
-        const ticket = await mgr.openTicket({
-            guildID: interaction.guildId,
-            openerID: interaction.user.id,
-            categoryID,
-            member,
-        }).catch(noop)
+        const ticket = await mgr
+            .openTicket({
+                guildID: interaction.guildId,
+                openerID: interaction.user.id,
+                categoryID,
+                member,
+            })
+            .catch(noop)
 
         if (ticket) {
-            await interaction.editReply({ content: `✅ Your ticket has been created: <#${ticket.channelID}>` }).catch(noop)
+            await interaction
+                .editReply({ content: `✅ Your ticket has been created: <#${ticket.channelID}>` })
+                .catch(noop)
         } else {
             await interaction.editReply({ content: "❌ Failed to create your ticket. Please try again." }).catch(noop)
         }
@@ -169,16 +200,20 @@ export class TicketsInteractionHandler {
             formAnswers[key] = comp.value
         }
 
-        const ticket = await mgr.openTicket({
-            guildID: interaction.guildId,
-            openerID: interaction.user.id,
-            categoryID,
-            member: interaction.member as GuildMember,
-            formAnswers,
-        }).catch(noop)
+        const ticket = await mgr
+            .openTicket({
+                guildID: interaction.guildId,
+                openerID: interaction.user.id,
+                categoryID,
+                member: interaction.member as GuildMember,
+                formAnswers,
+            })
+            .catch(noop)
 
         if (ticket) {
-            await interaction.editReply({ content: `✅ Your ticket has been created: <#${ticket.channelID}>` }).catch(noop)
+            await interaction
+                .editReply({ content: `✅ Your ticket has been created: <#${ticket.channelID}>` })
+                .catch(noop)
         } else {
             await interaction.editReply({ content: "❌ Failed to create your ticket. Please try again." }).catch(noop)
         }
@@ -189,10 +224,14 @@ export class TicketsInteractionHandler {
     private async _handleClose(interaction: any, ticketID: string) {
         const ticket = await TicketsDatabase.getTicket(ticketID)
         if (!ticket || !ticket.isActive()) {
-            return interaction.reply({ content: "❌ This ticket is not active.", flags: MessageFlags.Ephemeral }).catch(noop)
+            return interaction
+                .reply({ content: "❌ This ticket is not active.", flags: MessageFlags.Ephemeral })
+                .catch(noop)
         }
-        if (!await this._canManage(interaction, ticket)) {
-            return interaction.reply({ content: "❌ You don't have permission to close this ticket.", flags: MessageFlags.Ephemeral }).catch(noop)
+        if (!(await this._canManage(interaction, ticket))) {
+            return interaction
+                .reply({ content: "❌ You don't have permission to close this ticket.", flags: MessageFlags.Ephemeral })
+                .catch(noop)
         }
 
         await interaction.deferUpdate().catch(noop)
@@ -204,13 +243,22 @@ export class TicketsInteractionHandler {
     private async _handleClaim(interaction: any, ticketID: string) {
         const ticket = await TicketsDatabase.getTicket(ticketID)
         if (!ticket || !ticket.isActive()) {
-            return interaction.reply({ content: "❌ This ticket is not active.", flags: MessageFlags.Ephemeral }).catch(noop)
+            return interaction
+                .reply({ content: "❌ This ticket is not active.", flags: MessageFlags.Ephemeral })
+                .catch(noop)
         }
-        if (!await this._canManage(interaction, ticket)) {
-            return interaction.reply({ content: "❌ You don't have permission to claim this ticket.", flags: MessageFlags.Ephemeral }).catch(noop)
+        if (!(await this._canManage(interaction, ticket))) {
+            return interaction
+                .reply({ content: "❌ You don't have permission to claim this ticket.", flags: MessageFlags.Ephemeral })
+                .catch(noop)
         }
         if (ticket.claimedBy) {
-            return interaction.reply({ content: `❌ This ticket is already claimed by <@${ticket.claimedBy}>.`, flags: MessageFlags.Ephemeral }).catch(noop)
+            return interaction
+                .reply({
+                    content: `❌ This ticket is already claimed by <@${ticket.claimedBy}>.`,
+                    flags: MessageFlags.Ephemeral,
+                })
+                .catch(noop)
         }
 
         await interaction.deferUpdate().catch(noop)
@@ -222,8 +270,13 @@ export class TicketsInteractionHandler {
     private async _handleUnclaim(interaction: any, ticketID: string) {
         const ticket = await TicketsDatabase.getTicket(ticketID)
         if (!ticket) return
-        if (!await this._canManage(interaction, ticket)) {
-            return interaction.reply({ content: "❌ You don't have permission to unclaim this ticket.", flags: MessageFlags.Ephemeral }).catch(noop)
+        if (!(await this._canManage(interaction, ticket))) {
+            return interaction
+                .reply({
+                    content: "❌ You don't have permission to unclaim this ticket.",
+                    flags: MessageFlags.Ephemeral,
+                })
+                .catch(noop)
         }
 
         await interaction.deferUpdate().catch(noop)
@@ -235,8 +288,10 @@ export class TicketsInteractionHandler {
     private async _handleLock(interaction: any, ticketID: string) {
         const ticket = await TicketsDatabase.getTicket(ticketID)
         if (!ticket) return
-        if (!await this._canManage(interaction, ticket)) {
-            return interaction.reply({ content: "❌ You don't have permission.", flags: MessageFlags.Ephemeral }).catch(noop)
+        if (!(await this._canManage(interaction, ticket))) {
+            return interaction
+                .reply({ content: "❌ You don't have permission.", flags: MessageFlags.Ephemeral })
+                .catch(noop)
         }
         await interaction.deferUpdate().catch(noop)
         await this._mgr().lockTicket(ticketID, interaction.user.id).catch(noop)
@@ -245,8 +300,10 @@ export class TicketsInteractionHandler {
     private async _handleUnlock(interaction: any, ticketID: string) {
         const ticket = await TicketsDatabase.getTicket(ticketID)
         if (!ticket) return
-        if (!await this._canManage(interaction, ticket)) {
-            return interaction.reply({ content: "❌ You don't have permission.", flags: MessageFlags.Ephemeral }).catch(noop)
+        if (!(await this._canManage(interaction, ticket))) {
+            return interaction
+                .reply({ content: "❌ You don't have permission.", flags: MessageFlags.Ephemeral })
+                .catch(noop)
         }
         await interaction.deferUpdate().catch(noop)
         await this._mgr().unlockTicket(ticketID, interaction.user.id).catch(noop)
@@ -257,8 +314,10 @@ export class TicketsInteractionHandler {
     private async _handleReopen(interaction: any, ticketID: string) {
         const ticket = await TicketsDatabase.getTicket(ticketID)
         if (!ticket) return
-        if (!await this._canManage(interaction, ticket)) {
-            return interaction.reply({ content: "❌ You don't have permission.", flags: MessageFlags.Ephemeral }).catch(noop)
+        if (!(await this._canManage(interaction, ticket))) {
+            return interaction
+                .reply({ content: "❌ You don't have permission.", flags: MessageFlags.Ephemeral })
+                .catch(noop)
         }
         await interaction.deferUpdate().catch(noop)
         await this._mgr().reopenTicket(ticketID, interaction.user.id).catch(noop)
@@ -269,8 +328,13 @@ export class TicketsInteractionHandler {
     private async _handleDelete(interaction: any, ticketID: string) {
         const ticket = await TicketsDatabase.getTicket(ticketID)
         if (!ticket) return
-        if (!await this._canManage(interaction, ticket, true)) {
-            return interaction.reply({ content: "❌ You don't have permission to delete this ticket.", flags: MessageFlags.Ephemeral }).catch(noop)
+        if (!(await this._canManage(interaction, ticket, true))) {
+            return interaction
+                .reply({
+                    content: "❌ You don't have permission to delete this ticket.",
+                    flags: MessageFlags.Ephemeral,
+                })
+                .catch(noop)
         }
         await interaction.deferUpdate().catch(noop)
         await this._mgr().deleteTicket(ticketID).catch(noop)
@@ -290,17 +354,17 @@ export class TicketsInteractionHandler {
         if (member.permissions.has(PermissionsBitField.Flags.Administrator)) return true
 
         const settings = await TicketsDatabase.getSettings(guildID)
-        if (settings.globalStaffRoles.some(r => member.roles.cache.has(r))) return true
+        if (settings.globalStaffRoles.some((r) => member.roles.cache.has(r))) return true
 
         const category = ticket.categoryID ? await TicketsDatabase.getCategory(ticket.categoryID) : null
-        if (category?.staffRoles?.some(r => member.roles.cache.has(r))) return true
+        if (category?.staffRoles?.some((r) => member.roles.cache.has(r))) return true
 
         if (ticket.teamID) {
             const team = await TicketsDatabase.getTeam(ticket.teamID)
             if (team) {
                 if (requireDelete && !team.canDelete) return false
                 if (team.members.includes(interaction.user.id)) return true
-                if (team.roles.some(r => member.roles.cache.has(r))) return true
+                if (team.roles.some((r) => member.roles.cache.has(r))) return true
             }
         }
 

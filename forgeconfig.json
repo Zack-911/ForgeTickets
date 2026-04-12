@@ -1,0 +1,8 @@
+{
+  "$schema": "https://raw.githubusercontent.com/EdexLabs/ForgeLSP/main/forgeconfig.schema.json",
+  "extensions": [
+    "github:tryforge/forgescript#dev",
+    "github:zack-911/forgetickets#main"
+  ],
+  "custom_functions_path": "addPathHereRelativeToFile"
+}
