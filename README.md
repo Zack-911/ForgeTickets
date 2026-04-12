@@ -38,7 +38,7 @@ A powerful, fully-featured ticket system extension for ForgeScript.
 ```ts
 import { ForgeClient } from "@tryforge/forgescript"
 import { ForgeDB } from "@tryforge/forge.db"
-import { ForgeTickets } from "@tryforge/forge.tickets"
+import { ForgeTickets } from "forgetickets"
 
 const db = new ForgeDB({ type: "sqlite" })
 

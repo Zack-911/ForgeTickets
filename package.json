@@ -1,5 +1,5 @@
 {
-  "name": "@tryforge/forge.tickets",
+  "name": "forgetickets",
   "version": "1.0.0",
   "description": "A powerful, fully-featured ticket system extension for ForgeScript.",
   "main": "dist/index.js",
