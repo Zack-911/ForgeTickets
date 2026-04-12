@@ -39,7 +39,7 @@ client.commands.add({
     type: "messageCreate",
     code: `
     $onlyForUsers[;$botOwnerID]
-    $createPanel[$mentionedChannels[0]]
+    $!createPanel[$mentionedChannels[0]]
     ✅ Panel deployed!
 `,
 })
@@ -48,79 +48,140 @@ client.commands.add({
 client.commands.add({
     name: "close",
     type: "messageCreate",
-    code: `$onlyIf[$isTicket;❌ Not a ticket.] $closeTicket[;$message[true]]`,
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
+        $!closeTicket[;$message]
+    `,
 })
-client.commands.add({ name: "claim", type: "messageCreate", code: `$onlyIf[$isTicket;❌ Not a ticket.] $claimTicket` })
+client.commands.add({
+    name: "claim",
+    type: "messageCreate",
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
+        $claimTicket
+    `
+})
 client.commands.add({
     name: "unclaim",
     type: "messageCreate",
-    code: `$onlyIf[$isTicket;❌ Not a ticket.] $unclaimTicket`,
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
+        $unclaimTicket
+    `,
 })
-client.commands.add({ name: "lock", type: "messageCreate", code: `$onlyIf[$isTicket;❌ Not a ticket.] $lockTicket` })
+client.commands.add({
+    name: "lock",
+    type: "messageCreate",
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
+        $lockTicket
+    `
+})
+
 client.commands.add({
     name: "unlock",
     type: "messageCreate",
-    code: `$onlyIf[$isTicket;❌ Not a ticket.] $unlockTicket`,
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
+        $unlockTicket
+    `,
 })
 client.commands.add({
     name: "delete",
     type: "messageCreate",
-    code: `$onlyIf[$isTicket;❌ Not a ticket.] $deleteTicket`,
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
+        $deleteTicket
+    `,
 })
 client.commands.add({
     name: "priority",
     type: "messageCreate",
-    code: `$onlyIf[$isTicket;❌ Not a ticket.] $setTicketPriority[$message] ✅ Priority: **$ticketPriority**`,
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
+        $!setTicketPriority[$message] 
+        ✅ Priority: **$ticketPriority**
+    `,
 })
 client.commands.add({
     name: "transfer",
     type: "messageCreate",
-    code: `$onlyIf[$isTicket;❌ Not a ticket.] $transferTicket[$message] ✅ Transferred!`,
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
+        $!transferTicket[$message] 
+        ✅ Transferred!
+    `,
 })
 client.commands.add({
     name: "add",
     type: "messageCreate",
-    code: `$onlyIf[$isTicket;❌ Not a ticket.] $addTicketParticipant[$mentioned[0]] ✅ Added <@$mentioned[0]>`,
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
+        $!addTicketParticipant[$mentioned[0]] 
+        ✅ Added <@$mentioned[0]>
+    `,
 })
 client.commands.add({
     name: "remove",
     type: "messageCreate",
-    code: `$onlyIf[$isTicket;❌ Not a ticket.] $removeTicketParticipant[$mentioned[0]] ✅ Removed <@$mentioned[0]>`,
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
+        $!removeTicketParticipant[$mentioned[0]] 
+        ✅ Removed <@$mentioned[0]>
+    `,
 })
 client.commands.add({
     name: "tag",
     type: "messageCreate",
-    code: `$onlyIf[$isTicket;❌ Not a ticket.] $addTicketTag[$message] ✅ Tag added.`,
+    code: `$
+        onlyIf[$isTicket;❌ Not a ticket.] 
+        $!addTicketTag[$message] 
+        ✅ Tag added.
+    `,
 })
 client.commands.add({
     name: "note",
     type: "messageCreate",
-    code: `$onlyIf[$isTicket;❌ Not a ticket.] $addTicketNote[$message] ✅ Note added.`,
+    code: `$
+        onlyIf[$isTicket;❌ Not a ticket.] 
+        $!addTicketNote[$message] 
+        ✅ Note added.
+    `,
 })
 client.commands.add({
     name: "transcript",
     type: "messageCreate",
-    code: `$onlyIf[$isTicket;❌ Not a ticket.] $writeFile[./Ticket-$ticketNumber.html;$generateTranscript] ✅ Transcript saved to \`./Ticket-$ticketNumber.html\`!`,
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
+        $writeFile[./Ticket-$ticketNumber.html;$generateTranscript] 
+        ✅ Transcript saved to \`./Ticket-$ticketNumber.html\`!
+    `,
 })
 client.commands.add({
     name: "blacklist",
     type: "messageCreate",
-    code: `$blacklistUser[$mentioned[0];$message[1;]] ✅ Blacklisted <@$mentioned[0]>`,
+    code: `
+        $!blacklistUser[$mentioned[0];$message[1;]]
+        ✅ Blacklisted <@$mentioned[0]>
+    `,
 })
 client.commands.add({
     name: "unblacklist",
     type: "messageCreate",
-    code: `$unblacklist[$mentioned[0]] ✅ Unblacklisted.`,
+    code: `
+        $!unblacklist[$mentioned[0]]
+        ✅ Unblacklisted.
+    `,
 })
 
 client.commands.add({
     name: "ticketinfo",
     type: "messageCreate",
     code: `
-    $onlyIf[$isTicket;❌ Not a ticket.]
-    $title[Ticket #$ticketNumber]
-    $description[**State:** $ticketState\n**Priority:** $ticketPriority\n**Opener:** <@$ticketOpenerID>\n**Claimed by:** $if[$ticketClaimedBy;<@$ticketClaimedBy>;Unclaimed]\n**Tags:** $ticketTags\n**Created:** <t:$math[$ticketCreatedAt/1000]:F>]
-    $color[#5865F2]
+        $onlyIf[$isTicket;❌ Not a ticket.]
+        $title[Ticket #$ticketNumber]
+        $description[**State:** $ticketState\n**Priority:** $ticketPriority\n**Opener:** <@$ticketOpenerID>\n**Claimed by:** $if[$ticketClaimedBy;<@$ticketClaimedBy>;Unclaimed]\n**Tags:** $ticketTags\n**Created:** <t:$math[$ticketCreatedAt/1000]:F>]
+        $color[#5865F2]
 `,
 })
 
@@ -128,10 +189,10 @@ client.commands.add({
     name: "ticketstats",
     type: "messageCreate",
     code: `
-    $jsonLoad[s;$ticketCount]
-    $title[Ticket Stats — $guildName]
-    $description[**Total:** $env[s;total]\n**Open:** $env[s;open]\n**Claimed:** $env[s;claimed]\n**Closed:** $env[s;closed]]
-    $color[#5865F2]
+        $jsonLoad[s;$ticketCount]
+        $title[Ticket Stats — $guildName]
+        $description[**Total:** $env[s;total]\n**Open:** $env[s;open]\n**Claimed:** $env[s;claimed]\n**Closed:** $env[s;closed]]
+        $color[#5865F2]
 `,
 })
 

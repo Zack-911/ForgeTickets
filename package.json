@@ -35,11 +35,11 @@
     "@types/node": "^20.0.0",
     "discord.js": "^14.25.0",
     "prettier": "^3.5.3",
+    "sqlite3": "^5.1.7",
     "typedoc": "^0.26.11",
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "sqlite3": "^5.1.7",
     "tiny-typed-emitter": "^2.1.0",
     "typeorm": "^0.3.27"
   }
