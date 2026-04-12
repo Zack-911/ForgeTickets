@@ -587,7 +587,7 @@ class TicketsManager {
             embed.addFields({
                 name: "⏱️ Response SLA",
                 value: `${this._formatDuration(category.sla.responseTime)}`,
-                inline: true,
+                inline: false,
             });
         }
         const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder()

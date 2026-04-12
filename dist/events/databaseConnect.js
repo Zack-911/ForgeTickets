@@ -15,7 +15,7 @@ exports.default = new handlers_1.TicketEventHandler({
                 client: this,
                 command,
                 data: command.compiled.code,
-                obj: {}
+                obj: {},
             });
         }
     },

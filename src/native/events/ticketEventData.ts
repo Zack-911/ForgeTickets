@@ -28,7 +28,9 @@ function getProperty(ticket: Ticket, prop: TicketProperty, sep?: string | null):
     if (!ticket) return undefined
     switch (prop) {
         case TicketProperty.participants:
-            return Array.isArray(ticket.participants) ? ticket.participants.join(sep ?? ", ") : String(ticket.participants)
+            return Array.isArray(ticket.participants)
+                ? ticket.participants.join(sep ?? ", ")
+                : String(ticket.participants)
         case TicketProperty.tags:
             return Array.isArray(ticket.tags) ? ticket.tags.join(sep ?? ", ") : String(ticket.tags)
         case TicketProperty.formAnswers:
@@ -60,7 +62,7 @@ export default new NativeFunction({
         },
         {
             name: "separator",
-            description: "Separator for array properties (participants, tags). Default: \", \"",
+            description: 'Separator for array properties (participants, tags). Default: ", "',
             type: ArgType.String,
             required: false,
             rest: false,

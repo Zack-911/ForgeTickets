@@ -78,9 +78,9 @@ export class TicketsManager {
         // Build channel name from template
         const channelName = category
             ? category.channelNameTemplate
-                .replace("{count}", String(settings.totalTickets).padStart(4, "0"))
-                .replace("{id}", openerID)
-                .replace("{username}", member.user.username.replace(/[^a-z0-9-]/gi, "").toLowerCase())
+                  .replace("{count}", String(settings.totalTickets).padStart(4, "0"))
+                  .replace("{id}", openerID)
+                  .replace("{username}", member.user.username.replace(/[^a-z0-9-]/gi, "").toLowerCase())
             : `ticket-${String(settings.totalTickets).padStart(4, "0")}`
 
         // Create the ticket channel
@@ -702,7 +702,7 @@ export class TicketsManager {
             .setTitle(embedDef?.title ?? `🎫 Ticket #${ticket.number}`)
             .setDescription(
                 embedDef?.description ??
-                `Hello <@${ticket.openerID}>, welcome to your ticket!\nSupport staff will be with you shortly. Please describe your issue in detail.`
+                    `Hello <@${ticket.openerID}>, welcome to your ticket!\nSupport staff will be with you shortly. Please describe your issue in detail.`
             )
             .setColor(embedDef?.color ?? 0x5865f2)
             .setTimestamp()

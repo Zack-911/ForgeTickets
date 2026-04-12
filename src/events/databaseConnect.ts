@@ -14,7 +14,7 @@ export default new TicketEventHandler({
                 client: this,
                 command,
                 data: command.compiled.code,
-                obj: {}
+                obj: {},
             })
         }
     },

@@ -7,7 +7,8 @@ import { TranscriptFormat } from "../../structures/entities"
 export default new NativeFunction({
     name: "$generateTranscript",
     version: "1.0.0",
-    description: "Generates a transcript for the current ticket and returns the content as a string (HTML by default). Does not send or save anything automatically.",
+    description:
+        "Generates a transcript for the current ticket and returns the content as a string (HTML by default). Does not send or save anything automatically.",
     unwrap: true,
     brackets: false,
     args: [

@@ -9,7 +9,7 @@ exports.default = new forgescript_1.NativeFunction({
     output: forgescript_1.ArgType.Boolean,
     async execute(ctx) {
         // @ts-ignore
-        return this.successJSON((ctx.runtime.extras));
+        return this.successJSON(ctx.runtime.extras);
     },
 });
 //# sourceMappingURL=ticketEvent.js.map

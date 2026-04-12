@@ -20,10 +20,10 @@ class TranscriptGenerator {
     static async build(ticket, channel, format = entities_1.TranscriptFormat.HTML) {
         const messages = await this._fetchAllMessages(channel);
         const sorted = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-        const html = (format === entities_1.TranscriptFormat.HTML || format === entities_1.TranscriptFormat.Both)
+        const html = format === entities_1.TranscriptFormat.HTML || format === entities_1.TranscriptFormat.Both
             ? this._buildHTML(ticket, sorted, { name: "" })
             : null;
-        const text = (format === entities_1.TranscriptFormat.Text || format === entities_1.TranscriptFormat.Both)
+        const text = format === entities_1.TranscriptFormat.Text || format === entities_1.TranscriptFormat.Both
             ? this._buildText(ticket, sorted)
             : null;
         return { html, text };
