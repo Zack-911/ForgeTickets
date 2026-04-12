@@ -38,15 +38,10 @@ export class ForgeTickets extends ForgeExtension {
         }
 
         this.load(path.join(__dirname, "./native"))
-        console.log("uwu")
         const db = new TicketsDatabase(this.emitter)
-        console.log(":3")
         await db.init()
-        console.log("hello")
         new TicketsInteractionHandler(client)
-        console.log("hiya")
         this.ticketsManager = new TicketsManager(client, this.emitter)
-        console.log("uwu")
     }
 }
 
