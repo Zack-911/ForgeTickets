@@ -133,8 +133,8 @@ client.commands.add({
 client.commands.add({
     name: "tag",
     type: "messageCreate",
-    code: `$
-        onlyIf[$isTicket;❌ Not a ticket.] 
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
         $!addTicketTag[$message] 
         ✅ Tag added.
     `,
@@ -142,8 +142,8 @@ client.commands.add({
 client.commands.add({
     name: "note",
     type: "messageCreate",
-    code: `$
-        onlyIf[$isTicket;❌ Not a ticket.] 
+    code: `
+        $onlyIf[$isTicket;❌ Not a ticket.] 
         $!addTicketNote[$message] 
         ✅ Note added.
     `,
