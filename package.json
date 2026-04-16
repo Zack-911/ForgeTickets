@@ -25,10 +25,6 @@
     "support"
   ],
   "license": "GPL-3.0-or-later",
-  "peerDependencies": {
-    "@tryforge/forge.db": "^1.0.0",
-    "@tryforge/forgescript": "^2.0.0"
-  },
   "devDependencies": {
     "@tryforge/forge.db": "^2.1.1",
     "@tryforge/forgescript": "^2.5.0",
