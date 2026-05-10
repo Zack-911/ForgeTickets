@@ -519,6 +519,9 @@ export class GuildSettings {
     @Column({ default: false })
     dmOnClose: boolean
 
+    @Column("simple-json", { nullable: true })
+    renderers?: Partial<Record<string, string>>
+
     constructor(options?: Partial<GuildSettings>) {
         this.guildID = options?.guildID ?? ""
         this.globalStaffRoles = options?.globalStaffRoles ?? []

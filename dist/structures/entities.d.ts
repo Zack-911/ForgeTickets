@@ -234,6 +234,7 @@ export declare class GuildSettings {
     /** Whether to DM users on open/close */
     dmOnOpen: boolean;
     dmOnClose: boolean;
+    renderers?: Partial<Record<string, string>>;
     constructor(options?: Partial<GuildSettings>);
 }
 export declare class MongoGuildSettings extends GuildSettings {

@@ -10,7 +10,6 @@ import {
     time,
 } from "discord.js"
 import { ForgeClient } from "@tryforge/forgescript"
-import { ForgeTickets } from ".."
 import { TicketsDatabase } from "../structures/database"
 import {
     Ticket,
@@ -19,12 +18,12 @@ import {
     TicketPriority,
     TicketTeam,
     RoutingStrategy,
-    ICategoryEmbed,
 } from "../structures/entities"
 import { ITicketEvents } from "../handlers"
 import { TranscriptGenerator } from "./TranscriptGenerator"
 import { SLAManager } from "./SLAManager"
 import { encodeCID, CID } from "../handlers/TicketsInteractionHandler"
+import { TicketRenderer, TicketRendererEvent } from "./TicketRenderer"
 import noop from "../functions/noop"
 import { TypedEmitter } from "tiny-typed-emitter"
 import { TransformEvents } from "@tryforge/forge.db"
@@ -41,14 +40,17 @@ export interface IOpenTicketOptions {
 
 export class TicketsManager {
     private slaManager: SLAManager
+    private renderer: TicketRenderer
     private autoCloseTimers = new Map<string, NodeJS.Timeout>()
     private deleteTimers = new Map<string, NodeJS.Timeout>()
 
     constructor(
         private readonly client: ForgeClient,
-        private readonly emitter: TypedEmitter<TransformEvents<ITicketEvents>>
+        private readonly emitter: TypedEmitter<TransformEvents<ITicketEvents>>,
+        globalRenderers: Partial<Record<TicketRendererEvent, string>> = {}
     ) {
         this.slaManager = new SLAManager(client, emitter)
+        this.renderer = new TicketRenderer(client, globalRenderers)
         this._restoreTimers()
     }
 
@@ -64,18 +66,14 @@ export class TicketsManager {
         await TicketsDatabase.saveSettings(settings)
 
         const category = categoryID ? await TicketsDatabase.getCategory(categoryID) : null
-
-        // Determine team via smart routing
         const teamID = category ? await this._routeTicket(category, formAnswers, subject) : undefined
         const team = teamID ? await TicketsDatabase.getTeam(teamID) : null
 
-        // Increment category counter
         if (category) {
             category.ticketCount++
             await TicketsDatabase.saveCategory(category)
         }
 
-        // Build channel name from template
         const channelName = category
             ? category.channelNameTemplate
                   .replace("{count}", String(settings.totalTickets).padStart(4, "0"))
@@ -83,20 +81,17 @@ export class TicketsManager {
                   .replace("{username}", member.user.username.replace(/[^a-z0-9-]/gi, "").toLowerCase())
             : `ticket-${String(settings.totalTickets).padStart(4, "0")}`
 
-        // Create the ticket channel
-        const parentID = category?.parentChannelID
         const channel = await guild.channels
             .create({
                 name: channelName,
                 type: ChannelType.GuildText,
-                parent: parentID ?? undefined,
+                parent: category?.parentChannelID ?? undefined,
                 permissionOverwrites: this._buildPermissions(guild.id, openerID, category, team),
             })
             .catch(noop)
 
         if (!channel) return null
 
-        // Create ticket entity
         const ticket = new Ticket({
             guildID,
             channelID: channel.id,
@@ -111,20 +106,14 @@ export class TicketsManager {
             participants: [openerID],
         })
 
-        // Initialise SLA status
         if (category?.sla) {
-            ticket.slaStatus = {
-                responseBreached: false,
-                resolutionBreached: false,
-            }
+            ticket.slaStatus = { responseBreached: false, resolutionBreached: false }
         }
 
         await TicketsDatabase.saveTicket(ticket)
 
-        // Send the opening embed + control buttons
         await this._sendOpenEmbed(channel as TextChannel, ticket, category, team, member)
 
-        // Ping team if enabled
         if (team?.pingOnOpen) {
             const mentions = [...team.roles.map((r) => `<@&${r}>`), ...team.members.map((m) => `<@${m}>`)].join(" ")
             if (mentions)
@@ -133,7 +122,6 @@ export class TicketsManager {
                     .catch(noop)
         }
 
-        // Ping global staff
         if (settings.globalStaffRoles.length) {
             const mentions = settings.globalStaffRoles.map((r) => `<@&${r}>`).join(" ")
             if (mentions)
@@ -144,7 +132,6 @@ export class TicketsManager {
 
         this.emitter.emit("ticketOpen", ticket)
 
-        // DM opener
         if (settings.dmOnOpen) {
             const user = await this.client.users.fetch(openerID).catch(noop)
             user?.send({
@@ -152,23 +139,16 @@ export class TicketsManager {
             }).catch(noop)
         }
 
-        // Start SLA timer
-        if (category?.sla) {
-            this.slaManager.startSLA(ticket, category.sla)
-        }
-
-        // Start auto-close inactivity timer
-        if (category?.autoCloseAfter && category.autoCloseAfter > 0) {
+        if (category?.sla) this.slaManager.startSLA(ticket, category.sla)
+        if (category?.autoCloseAfter && category.autoCloseAfter > 0)
             this._scheduleAutoClose(ticket, category.autoCloseAfter)
-        }
 
-        // Log event
         await this._log(
-            guildID,
+            ticket,
+            "open",
             `🎫 Ticket **#${ticket.number}** opened by <@${openerID}>${category ? ` in **${category.name}**` : ""}`,
             0x57f287
         )
-
         return ticket
     }
 
@@ -181,10 +161,7 @@ export class TicketsManager {
         const category = ticket.categoryID ? await TicketsDatabase.getCategory(ticket.categoryID) : null
         const channel = this.client.channels.cache.get(ticket.channelID) as TextChannel | undefined
 
-        // Generate transcript before modifying state
-        if (channel && category) {
-            await TranscriptGenerator.generate(ticket, channel, category).catch(noop)
-        }
+        if (channel && category) await TranscriptGenerator.generate(ticket, channel, category).catch(noop)
 
         ticket.state = TicketState.Closed
         ticket.closedAt = Date.now()
@@ -195,12 +172,10 @@ export class TicketsManager {
         this.slaManager.clearSLA(ticketID)
         this._clearAutoClose(ticketID)
 
-        // Update channel — remove opener's access, send close embed
         if (channel) {
             const opener = await this.client.users.fetch(ticket.openerID).catch(noop)
-            if (opener) {
+            if (opener)
                 await channel.permissionOverwrites.edit(opener, { SendMessages: false, ViewChannel: false }).catch(noop)
-            }
             await this._sendCloseEmbed(channel, ticket, category, closedBy)
         }
 
@@ -214,14 +189,14 @@ export class TicketsManager {
                 .catch(noop)
         }
 
-        if (category?.deleteAfter && category.deleteAfter > 0) {
-            this._scheduleDelete(ticket, category.deleteAfter)
-        }
+        if (category?.deleteAfter && category.deleteAfter > 0) this._scheduleDelete(ticket, category.deleteAfter)
 
         await this._log(
-            ticket.guildID,
+            ticket,
+            "close",
             `🔒 Ticket **#${ticket.number}** closed by <@${closedBy}>${reason ? `. Reason: ${reason}` : ""}`,
-            0xed4245
+            0xed4245,
+            { closedByID: closedBy, closeReason: reason ?? "None" }
         )
         return ticket
     }
@@ -237,32 +212,41 @@ export class TicketsManager {
         ticket.touch()
         await TicketsDatabase.saveTicket(ticket)
 
-        // Give claimer exclusive send permissions
         const channel = this.client.channels.cache.get(ticket.channelID) as TextChannel | undefined
         if (channel) {
             await channel.permissionOverwrites.edit(claimedBy, { SendMessages: true, ViewChannel: true }).catch(noop)
-            await channel
-                .send({
-                    embeds: [
-                        new EmbedBuilder()
-                            .setDescription(`🎯 This ticket has been claimed by <@${claimedBy}>.`)
-                            .setColor(0x5865f2)
-                            .setTimestamp(),
-                    ],
-                })
-                .catch(noop)
+
+            const rendered = await this.renderer.render(
+                "claim",
+                ticket.guildID,
+                channel,
+                TicketRenderer.claimData(ticket, claimedBy)
+            )
+            if (!rendered) {
+                await channel
+                    .send({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setDescription(`🎯 This ticket has been claimed by <@${claimedBy}>.`)
+                                .setColor(0x5865f2)
+                                .setTimestamp(),
+                        ],
+                    })
+                    .catch(noop)
+            }
         }
 
         this.emitter.emit("ticketClaim", ticket, claimedBy)
 
-        // Reset SLA response timer — first response happened
         if (ticket.slaStatus && !ticket.slaStatus.firstResponseAt) {
             ticket.slaStatus.firstResponseAt = Date.now()
             await TicketsDatabase.saveTicket(ticket)
             this.slaManager.markFirstResponse(ticketID)
         }
 
-        await this._log(ticket.guildID, `🎯 Ticket **#${ticket.number}** claimed by <@${claimedBy}>`, 0x5865f2)
+        await this._log(ticket, "claim", `🎯 Ticket **#${ticket.number}** claimed by <@${claimedBy}>`, 0x5865f2, {
+            claimedByID: claimedBy,
+        })
         return ticket
     }
 
@@ -281,20 +265,31 @@ export class TicketsManager {
         const channel = this.client.channels.cache.get(ticket.channelID) as TextChannel | undefined
         if (channel) {
             if (prev) await channel.permissionOverwrites.delete(prev).catch(noop)
-            await channel
-                .send({
-                    embeds: [
-                        new EmbedBuilder()
-                            .setDescription(`↩️ This ticket has been unclaimed by <@${unclaimedBy}>.`)
-                            .setColor(0xfee75c)
-                            .setTimestamp(),
-                    ],
-                })
-                .catch(noop)
+
+            const rendered = await this.renderer.render(
+                "unclaim",
+                ticket.guildID,
+                channel,
+                TicketRenderer.unclaimData(ticket, unclaimedBy)
+            )
+            if (!rendered) {
+                await channel
+                    .send({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setDescription(`↩️ This ticket has been unclaimed by <@${unclaimedBy}>.`)
+                                .setColor(0xfee75c)
+                                .setTimestamp(),
+                        ],
+                    })
+                    .catch(noop)
+            }
         }
 
         this.emitter.emit("ticketUnclaim", ticket, unclaimedBy)
-        await this._log(ticket.guildID, `↩️ Ticket **#${ticket.number}** unclaimed by <@${unclaimedBy}>`, 0xfee75c)
+        await this._log(ticket, "unclaim", `↩️ Ticket **#${ticket.number}** unclaimed by <@${unclaimedBy}>`, 0xfee75c, {
+            unclaimedByID: unclaimedBy,
+        })
         return ticket
     }
 
@@ -312,22 +307,33 @@ export class TicketsManager {
         if (channel) {
             const opener = await this.client.users.fetch(ticket.openerID).catch(noop)
             if (opener) await channel.permissionOverwrites.edit(opener, { SendMessages: false }).catch(noop)
-            await channel
-                .send({
-                    embeds: [
-                        new EmbedBuilder()
-                            .setDescription(
-                                `🔐 This ticket has been locked by <@${lockedBy}>. The opener can no longer send messages.`
-                            )
-                            .setColor(0xed4245)
-                            .setTimestamp(),
-                    ],
-                })
-                .catch(noop)
+
+            const rendered = await this.renderer.render(
+                "lock",
+                ticket.guildID,
+                channel,
+                TicketRenderer.lockData(ticket, lockedBy)
+            )
+            if (!rendered) {
+                await channel
+                    .send({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setDescription(
+                                    `🔐 This ticket has been locked by <@${lockedBy}>. The opener can no longer send messages.`
+                                )
+                                .setColor(0xed4245)
+                                .setTimestamp(),
+                        ],
+                    })
+                    .catch(noop)
+            }
         }
 
         this.emitter.emit("ticketLock", ticket, lockedBy)
-        await this._log(ticket.guildID, `🔐 Ticket **#${ticket.number}** locked by <@${lockedBy}>`, 0xed4245)
+        await this._log(ticket, "lock", `🔐 Ticket **#${ticket.number}** locked by <@${lockedBy}>`, 0xed4245, {
+            lockedByID: lockedBy,
+        })
         return ticket
     }
 
@@ -345,20 +351,31 @@ export class TicketsManager {
         if (channel) {
             const opener = await this.client.users.fetch(ticket.openerID).catch(noop)
             if (opener) await channel.permissionOverwrites.edit(opener, { SendMessages: true }).catch(noop)
-            await channel
-                .send({
-                    embeds: [
-                        new EmbedBuilder()
-                            .setDescription(`🔓 This ticket has been unlocked by <@${unlockedBy}>.`)
-                            .setColor(0x57f287)
-                            .setTimestamp(),
-                    ],
-                })
-                .catch(noop)
+
+            const rendered = await this.renderer.render(
+                "unlock",
+                ticket.guildID,
+                channel,
+                TicketRenderer.unlockData(ticket, unlockedBy)
+            )
+            if (!rendered) {
+                await channel
+                    .send({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setDescription(`🔓 This ticket has been unlocked by <@${unlockedBy}>.`)
+                                .setColor(0x57f287)
+                                .setTimestamp(),
+                        ],
+                    })
+                    .catch(noop)
+            }
         }
 
         this.emitter.emit("ticketUnlock", ticket, unlockedBy)
-        await this._log(ticket.guildID, `🔓 Ticket **#${ticket.number}** unlocked by <@${unlockedBy}>`, 0x57f287)
+        await this._log(ticket, "unlock", `🔓 Ticket **#${ticket.number}** unlocked by <@${unlockedBy}>`, 0x57f287, {
+            unlockedByID: unlockedBy,
+        })
         return ticket
     }
 
@@ -382,30 +399,36 @@ export class TicketsManager {
             const opener = await this.client.users.fetch(ticket.openerID).catch(noop)
             if (opener)
                 await channel.permissionOverwrites.edit(opener, { SendMessages: true, ViewChannel: true }).catch(noop)
-            await channel
-                .send({
-                    embeds: [
-                        new EmbedBuilder()
-                            .setDescription(`🔄 This ticket has been reopened by <@${reopenedBy}>.`)
-                            .setColor(0x57f287)
-                            .setTimestamp(),
-                    ],
-                })
-                .catch(noop)
+
+            const rendered = await this.renderer.render(
+                "reopen",
+                ticket.guildID,
+                channel,
+                TicketRenderer.reopenData(ticket, reopenedBy)
+            )
+            if (!rendered) {
+                await channel
+                    .send({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setDescription(`🔄 This ticket has been reopened by <@${reopenedBy}>.`)
+                                .setColor(0x57f287)
+                                .setTimestamp(),
+                        ],
+                    })
+                    .catch(noop)
+            }
         }
 
         this.emitter.emit("ticketReopen", ticket)
 
-        // Restart SLA if applicable
-        if (category?.sla && ticket.slaStatus) {
-            this.slaManager.startSLA(ticket, category.sla)
-        }
-
-        if (category?.autoCloseAfter && category.autoCloseAfter > 0) {
+        if (category?.sla && ticket.slaStatus) this.slaManager.startSLA(ticket, category.sla)
+        if (category?.autoCloseAfter && category.autoCloseAfter > 0)
             this._scheduleAutoClose(ticket, category.autoCloseAfter)
-        }
 
-        await this._log(ticket.guildID, `🔄 Ticket **#${ticket.number}** reopened by <@${reopenedBy}>`, 0x57f287)
+        await this._log(ticket, "reopen", `🔄 Ticket **#${ticket.number}** reopened by <@${reopenedBy}>`, 0x57f287, {
+            reopenedByID: reopenedBy,
+        })
         return ticket
     }
 
@@ -427,7 +450,8 @@ export class TicketsManager {
 
         this.emitter.emit("ticketDelete", ticket)
         await this._log(
-            ticket.guildID,
+            ticket,
+            "open",
             `🗑️ Ticket **#${ticket.number}** deleted (opened by <@${ticket.openerID}>)`,
             0xeb459e
         )
@@ -452,28 +476,36 @@ export class TicketsManager {
 
         const channel = this.client.channels.cache.get(ticket.channelID) as TextChannel | undefined
         if (channel) {
-            // Re-apply permissions for new team
             const overwrites = await this._buildTeamOverwrites(newTeam)
-            for (const [id, perms] of overwrites) {
-                await channel.permissionOverwrites.edit(id, perms).catch(noop)
+            for (const [id, perms] of overwrites) await channel.permissionOverwrites.edit(id, perms).catch(noop)
+
+            const rendered = await this.renderer.render(
+                "transfer",
+                ticket.guildID,
+                channel,
+                TicketRenderer.transferData(ticket, newTeamID, newTeam.name)
+            )
+            if (!rendered) {
+                await channel
+                    .send({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setDescription(`↗️ This ticket has been transferred to **${newTeam.name}**.`)
+                                .setColor(0x5865f2)
+                                .setTimestamp(),
+                        ],
+                    })
+                    .catch(noop)
             }
-            await channel
-                .send({
-                    embeds: [
-                        new EmbedBuilder()
-                            .setDescription(`↗️ This ticket has been transferred to **${newTeam.name}**.`)
-                            .setColor(0x5865f2)
-                            .setTimestamp(),
-                    ],
-                })
-                .catch(noop)
         }
 
         this.emitter.emit("ticketTransfer", ticket, oldTeamID, newTeamID)
         await this._log(
-            ticket.guildID,
+            ticket,
+            "transfer",
             `↗️ Ticket **#${ticket.number}** transferred to team **${newTeam.name}**`,
-            0x5865f2
+            0x5865f2,
+            { newTeamID, newTeamName: newTeam.name }
         )
         return ticket
     }
@@ -483,32 +515,25 @@ export class TicketsManager {
     public async addParticipant(ticketID: string, userID: Snowflake): Promise<Ticket | null> {
         const ticket = await TicketsDatabase.getTicket(ticketID)
         if (!ticket || ticket.participants.includes(userID)) return ticket
-
         ticket.participants.push(userID)
         ticket.touch()
         await TicketsDatabase.saveTicket(ticket)
-
         const channel = this.client.channels.cache.get(ticket.channelID) as TextChannel | undefined
-        if (channel) {
+        if (channel)
             await channel.permissionOverwrites
                 .edit(userID, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true })
                 .catch(noop)
-        }
         return ticket
     }
 
     public async removeParticipant(ticketID: string, userID: Snowflake): Promise<Ticket | null> {
         const ticket = await TicketsDatabase.getTicket(ticketID)
         if (!ticket) return null
-
         ticket.participants = ticket.participants.filter((p) => p !== userID)
         ticket.touch()
         await TicketsDatabase.saveTicket(ticket)
-
         const channel = this.client.channels.cache.get(ticket.channelID) as TextChannel | undefined
-        if (channel) {
-            await channel.permissionOverwrites.delete(userID).catch(noop)
-        }
+        if (channel) await channel.permissionOverwrites.delete(userID).catch(noop)
         return ticket
     }
 
@@ -542,9 +567,11 @@ export class TicketsManager {
         await TicketsDatabase.saveTicket(ticket)
         this.emitter.emit("ticketPriorityChange", ticket, old, priority)
         await this._log(
-            ticket.guildID,
+            ticket,
+            "open",
             `⚡ Ticket **#${ticket.number}** priority changed from **${old}** to **${priority}**`,
-            0xfee75c
+            0xfee75c,
+            { oldPriority: old, newPriority: priority }
         )
         return ticket
     }
@@ -560,135 +587,7 @@ export class TicketsManager {
         return ticket
     }
 
-    // ─── Smart Routing ────────────────────────────────────────────────────
-
-    private async _routeTicket(
-        category: TicketCategory,
-        formAnswers?: Record<string, string>,
-        subject?: string
-    ): Promise<string | undefined> {
-        if (!category.teamID && !category.routingRules?.length) return undefined
-
-        // Check routing rules first
-        if (category.routingRules?.length && (formAnswers || subject)) {
-            for (const rule of category.routingRules) {
-                // Keyword matching against subject
-                if (rule.keywords?.length && subject) {
-                    const lc = subject.toLowerCase()
-                    if (rule.keywords.some((kw) => lc.includes(kw.toLowerCase()))) {
-                        return rule.targetTeamID
-                    }
-                }
-                // Form answer matching
-                if (rule.formAnswers && formAnswers) {
-                    const allMatch = Object.entries(rule.formAnswers).every(([k, v]) =>
-                        formAnswers[k]?.toLowerCase().includes(v.toLowerCase())
-                    )
-                    if (allMatch) return rule.targetTeamID
-                }
-            }
-        }
-
-        if (!category.teamID) return undefined
-
-        // Default team with routing strategy
-        const team = await TicketsDatabase.getTeam(category.teamID)
-        if (!team) return undefined
-
-        if (category.routingStrategy === RoutingStrategy.RoundRobin) {
-            const members = team.members.length ? team.members : team.roles
-            const idx = team.rrIndex % members.length
-            team.rrIndex = (team.rrIndex + 1) % Math.max(members.length, 1)
-            await TicketsDatabase.saveTeam(team)
-        }
-
-        return team.id
-    }
-
-    // ─── Channel Permissions ──────────────────────────────────────────────
-
-    private _buildPermissions(
-        guildID: Snowflake,
-        openerID: Snowflake,
-        category: TicketCategory | null,
-        team: TicketTeam | null
-    ) {
-        const base: any[] = [
-            // Deny @everyone
-            { id: guildID, deny: [PermissionsBitField.Flags.ViewChannel] },
-            // Allow opener
-            {
-                id: openerID,
-                allow: [
-                    PermissionsBitField.Flags.ViewChannel,
-                    PermissionsBitField.Flags.SendMessages,
-                    PermissionsBitField.Flags.ReadMessageHistory,
-                    PermissionsBitField.Flags.AttachFiles,
-                ],
-            },
-        ]
-
-        // Category staff roles
-        if (category?.staffRoles) {
-            for (const role of category.staffRoles) {
-                base.push({
-                    id: role,
-                    allow: [
-                        PermissionsBitField.Flags.ViewChannel,
-                        PermissionsBitField.Flags.SendMessages,
-                        PermissionsBitField.Flags.ReadMessageHistory,
-                        PermissionsBitField.Flags.ManageMessages,
-                        PermissionsBitField.Flags.AttachFiles,
-                    ],
-                })
-            }
-        }
-
-        // Team roles and members
-        if (team) {
-            for (const role of team.roles) {
-                base.push({
-                    id: role,
-                    allow: [
-                        PermissionsBitField.Flags.ViewChannel,
-                        PermissionsBitField.Flags.SendMessages,
-                        PermissionsBitField.Flags.ReadMessageHistory,
-                        PermissionsBitField.Flags.ManageMessages,
-                        PermissionsBitField.Flags.AttachFiles,
-                    ],
-                })
-            }
-            for (const member of team.members) {
-                base.push({
-                    id: member,
-                    allow: [
-                        PermissionsBitField.Flags.ViewChannel,
-                        PermissionsBitField.Flags.SendMessages,
-                        PermissionsBitField.Flags.ReadMessageHistory,
-                        PermissionsBitField.Flags.ManageMessages,
-                        PermissionsBitField.Flags.AttachFiles,
-                    ],
-                })
-            }
-        }
-
-        return base
-    }
-
-    private async _buildTeamOverwrites(team: TicketTeam): Promise<Map<string, any>> {
-        const map = new Map<string, any>()
-        const allow = [
-            PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages,
-            PermissionsBitField.Flags.ReadMessageHistory,
-            PermissionsBitField.Flags.ManageMessages,
-        ]
-        for (const role of team.roles) map.set(role, { allow })
-        for (const member of team.members) map.set(member, { allow })
-        return map
-    }
-
-    // ─── Embeds ───────────────────────────────────────────────────────────
+    // ─── Embed senders ────────────────────────────────────────────────────
 
     private async _sendOpenEmbed(
         channel: TextChannel,
@@ -697,6 +596,21 @@ export class TicketsManager {
         team: TicketTeam | null,
         member: GuildMember
     ) {
+        const data = TicketRenderer.openData(ticket, category?.name, team?.name)
+
+        // Expose button custom IDs so custom renderers can build their own action rows
+        const extraData: Record<string, string> = {
+            closeButtonId: encodeCID(CID.TICKET_CLOSE, ticket.id),
+            claimButtonId: encodeCID(CID.TICKET_CLAIM, ticket.id),
+            lockButtonId: encodeCID(CID.TICKET_LOCK, ticket.id),
+            reopenButtonId: encodeCID(CID.TICKET_REOPEN, ticket.id),
+            deleteButtonId: encodeCID(CID.TICKET_DELETE, ticket.id),
+        }
+
+        const rendered = await this.renderer.render("open", ticket.guildID, channel, { ...data, ...extraData })
+        if (rendered) return
+
+        // ── Default embed ──────────────────────────────────────────────────
         const embedDef = category?.openEmbed
         const embed = new EmbedBuilder()
             .setTitle(embedDef?.title ?? `🎫 Ticket #${ticket.number}`)
@@ -720,7 +634,6 @@ export class TicketsManager {
         if (embedDef?.thumbnailURL) embed.setThumbnail(embedDef.thumbnailURL)
         if (embedDef?.imageURL) embed.setImage(embedDef.imageURL)
 
-        // Show form answers in embed
         if (ticket.formAnswers && Object.keys(ticket.formAnswers).length) {
             const category_ = ticket.categoryID
                 ? await TicketsDatabase.getCategory(ticket.categoryID).catch(() => null)
@@ -732,8 +645,6 @@ export class TicketsManager {
         }
 
         if (team) embed.addFields({ name: "Assigned Team", value: team.name, inline: true })
-
-        // SLA footer note
         if (category?.sla?.responseTime) {
             embed.addFields({
                 name: "⏱️ Response SLA",
@@ -769,6 +680,17 @@ export class TicketsManager {
         category: TicketCategory | null,
         closedBy: Snowflake
     ) {
+        const data = TicketRenderer.closeData(ticket, closedBy, category?.name)
+
+        const extraData: Record<string, string> = {
+            reopenButtonId: encodeCID(CID.TICKET_REOPEN, ticket.id),
+            deleteButtonId: encodeCID(CID.TICKET_DELETE, ticket.id),
+        }
+
+        const rendered = await this.renderer.render("close", ticket.guildID, channel, { ...data, ...extraData })
+        if (rendered) return
+
+        // ── Default embed ──────────────────────────────────────────────────
         const embedDef = category?.closeEmbed
         const embed = new EmbedBuilder()
             .setTitle(embedDef?.title ?? `🔒 Ticket Closed`)
@@ -816,7 +738,147 @@ export class TicketsManager {
         await channel.send({ embeds: [embed], components: [row] }).catch(noop)
     }
 
-    // ─── Auto-close timer ─────────────────────────────────────────────────
+    // ─── Logging ──────────────────────────────────────────────────────────
+
+    private async _log(
+        ticket: Ticket,
+        event: string,
+        message: string,
+        color: number,
+        extra: Record<string, string> = {}
+    ) {
+        const settings = await TicketsDatabase.getSettings(ticket.guildID)
+        if (!settings.logChannelID) return
+
+        const ch = this.client.channels.cache.get(settings.logChannelID) as TextChannel | undefined
+        if (!ch) return
+
+        // Try custom log renderer first
+        const rendered = await this.renderer.render(
+            "log",
+            ticket.guildID,
+            ch,
+            TicketRenderer.logData(ticket, event as any, message, extra)
+        )
+        if (rendered) return
+
+        ch.send({
+            embeds: [new EmbedBuilder().setDescription(message).setColor(color).setTimestamp()],
+        }).catch(noop)
+    }
+
+    // ─── Smart Routing ────────────────────────────────────────────────────
+
+    private async _routeTicket(
+        category: TicketCategory,
+        formAnswers?: Record<string, string>,
+        subject?: string
+    ): Promise<string | undefined> {
+        if (!category.teamID && !category.routingRules?.length) return undefined
+
+        if (category.routingRules?.length && (formAnswers || subject)) {
+            for (const rule of category.routingRules) {
+                if (rule.keywords?.length && subject) {
+                    const lc = subject.toLowerCase()
+                    if (rule.keywords.some((kw) => lc.includes(kw.toLowerCase()))) return rule.targetTeamID
+                }
+                if (rule.formAnswers && formAnswers) {
+                    const allMatch = Object.entries(rule.formAnswers).every(([k, v]) =>
+                        formAnswers[k]?.toLowerCase().includes(v.toLowerCase())
+                    )
+                    if (allMatch) return rule.targetTeamID
+                }
+            }
+        }
+
+        if (!category.teamID) return undefined
+        const team = await TicketsDatabase.getTeam(category.teamID)
+        if (!team) return undefined
+
+        if (category.routingStrategy === RoutingStrategy.RoundRobin) {
+            const members = team.members.length ? team.members : team.roles
+            team.rrIndex = (team.rrIndex + 1) % Math.max(members.length, 1)
+            await TicketsDatabase.saveTeam(team)
+        }
+
+        return team.id
+    }
+
+    // ─── Channel Permissions ──────────────────────────────────────────────
+
+    private _buildPermissions(
+        guildID: Snowflake,
+        openerID: Snowflake,
+        category: TicketCategory | null,
+        team: TicketTeam | null
+    ) {
+        const base: any[] = [
+            { id: guildID, deny: [PermissionsBitField.Flags.ViewChannel] },
+            {
+                id: openerID,
+                allow: [
+                    PermissionsBitField.Flags.ViewChannel,
+                    PermissionsBitField.Flags.SendMessages,
+                    PermissionsBitField.Flags.ReadMessageHistory,
+                    PermissionsBitField.Flags.AttachFiles,
+                ],
+            },
+        ]
+        if (category?.staffRoles) {
+            for (const role of category.staffRoles) {
+                base.push({
+                    id: role,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.ReadMessageHistory,
+                        PermissionsBitField.Flags.ManageMessages,
+                        PermissionsBitField.Flags.AttachFiles,
+                    ],
+                })
+            }
+        }
+        if (team) {
+            for (const role of team.roles)
+                base.push({
+                    id: role,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.ReadMessageHistory,
+                        PermissionsBitField.Flags.ManageMessages,
+                        PermissionsBitField.Flags.AttachFiles,
+                    ],
+                })
+            for (const member of team.members)
+                base.push({
+                    id: member,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.ReadMessageHistory,
+                        PermissionsBitField.Flags.ManageMessages,
+                        PermissionsBitField.Flags.AttachFiles,
+                    ],
+                })
+        }
+        return base
+    }
+
+    private async _buildTeamOverwrites(team: TicketTeam): Promise<Map<string, any>> {
+        const map = new Map<string, any>()
+        const allow = [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory,
+            PermissionsBitField.Flags.ManageMessages,
+        ]
+        for (const role of team.roles) map.set(role, { allow })
+        for (const member of team.members) map.set(member, { allow })
+        return map
+    }
+
+    // ─── Auto-close / auto-delete timers ──────────────────────────────────
 
     private _scheduleAutoClose(ticket: Ticket, delay: number) {
         this._clearAutoClose(ticket.id)
@@ -824,11 +886,9 @@ export class TicketsManager {
             const fresh = await TicketsDatabase.getTicket(ticket.id)
             if (!fresh || !fresh.isActive()) return
             const inactive = Date.now() - (fresh.lastActivityAt ?? fresh.createdAt)
-            if (inactive >= delay) {
+            if (inactive >= delay)
                 await this.closeTicket(ticket.id, this.client.user!.id, "Auto-closed due to inactivity")
-            } else {
-                this._scheduleAutoClose(fresh, delay - inactive)
-            }
+            else this._scheduleAutoClose(fresh, delay - inactive)
         }, delay)
         this.autoCloseTimers.set(ticket.id, timer)
     }
@@ -840,8 +900,6 @@ export class TicketsManager {
             this.autoCloseTimers.delete(ticketID)
         }
     }
-
-    // ─── Auto-delete timer ────────────────────────────────────────────────
 
     private _scheduleDelete(ticket: Ticket, delay: number) {
         this._clearDelete(ticket.id)
@@ -859,44 +917,26 @@ export class TicketsManager {
         }
     }
 
-    // ─── Restore timers on startup ─────────────────────────────────────────
-
     private async _restoreTimers() {
-        // Wait for bot to be ready
-        this.client.once("clientReady" as any, async () => {
+        this.client.once("ready" as any, async () => {
             const guilds = this.client.guilds.cache
             for (const [, guild] of guilds) {
                 const tickets = await TicketsDatabase.getActiveTickets(guild.id)
                 for (const ticket of tickets) {
                     const category = ticket.categoryID ? await TicketsDatabase.getCategory(ticket.categoryID) : null
-
                     if (category?.sla) this.slaManager.startSLA(ticket, category.sla)
-
                     if (category?.autoCloseAfter && category.autoCloseAfter > 0) {
                         const elapsed = Date.now() - (ticket.lastActivityAt ?? ticket.createdAt)
                         const remaining = category.autoCloseAfter - elapsed
-                        if (remaining <= 0) {
+                        if (remaining <= 0)
                             this.closeTicket(ticket.id, this.client.user!.id, "Auto-closed due to inactivity").catch(
                                 noop
                             )
-                        } else {
-                            this._scheduleAutoClose(ticket, remaining)
-                        }
+                        else this._scheduleAutoClose(ticket, remaining)
                     }
                 }
             }
         })
-    }
-
-    // ─── Logging ──────────────────────────────────────────────────────────
-
-    private async _log(guildID: Snowflake, message: string, color: number) {
-        const settings = await TicketsDatabase.getSettings(guildID)
-        if (!settings.logChannelID) return
-        const ch = this.client.channels.cache.get(settings.logChannelID) as TextChannel | undefined
-        ch?.send({
-            embeds: [new EmbedBuilder().setDescription(message).setColor(color).setTimestamp()],
-        }).catch(noop)
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────

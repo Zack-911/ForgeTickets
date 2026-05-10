@@ -6,10 +6,26 @@ import { TicketsDatabase } from "./structures/database"
 import { TicketsManager } from "./managers/TicketsManager"
 import { TicketsCommandManager } from "./managers/TicketsCommandManager"
 import { TicketsInteractionHandler } from "./handlers/TicketsInteractionHandler"
+import { TicketRendererEvent } from "./managers/TicketRenderer"
 import path from "path"
 
 export interface IForgeTicketsOptions {
     events?: Array<keyof ITicketEvents>
+
+    /**
+     * Global renderer code per event. Applied to every guild that has not
+     * set its own guild-specific renderer for that event via $setTicketRenderer.
+     *
+     * Guild-specific renderers always take precedence over these.
+     *
+     * @example
+     * globalRenderers: {
+     *   open:  `$addEmbed[$newEmbed[$setTitle[🎫 Ticket #$env[ticketNumber]]]]$sendEmbed[$channelID]`,
+     *   close: `$sendMessage[$channelID;🔒 Closed by $env[closedByMention]]`,
+     *   log:   `$sendMessage[$env[channelID];$env[logMessage]]`,
+     * }
+     */
+    globalRenderers?: Partial<Record<TicketRendererEvent, string>>
 }
 
 export class ForgeTickets extends ForgeExtension {
@@ -41,7 +57,8 @@ export class ForgeTickets extends ForgeExtension {
         const db = new TicketsDatabase(this.emitter)
         await db.init()
         new TicketsInteractionHandler(client)
-        this.ticketsManager = new TicketsManager(client, this.emitter)
+        // Pass globalRenderers into TicketsManager → TicketRenderer
+        this.ticketsManager = new TicketsManager(client, this.emitter, this.options.globalRenderers)
     }
 }
 

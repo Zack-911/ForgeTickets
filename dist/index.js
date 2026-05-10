@@ -50,7 +50,8 @@ class ForgeTickets extends forgescript_1.ForgeExtension {
         const db = new database_1.TicketsDatabase(this.emitter);
         await db.init();
         new TicketsInteractionHandler_1.TicketsInteractionHandler(client);
-        this.ticketsManager = new TicketsManager_1.TicketsManager(client, this.emitter);
+        // Pass globalRenderers into TicketsManager → TicketRenderer
+        this.ticketsManager = new TicketsManager_1.TicketsManager(client, this.emitter, this.options.globalRenderers);
     }
 }
 exports.ForgeTickets = ForgeTickets;

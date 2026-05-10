@@ -604,6 +604,7 @@ let GuildSettings = class GuildSettings {
     /** Whether to DM users on open/close */
     dmOnOpen;
     dmOnClose;
+    renderers;
     constructor(options) {
         this.guildID = options?.guildID ?? "";
         this.globalStaffRoles = options?.globalStaffRoles ?? [];
@@ -637,6 +638,10 @@ __decorate([
     (0, typeorm_1.Column)({ default: false }),
     __metadata("design:type", Boolean)
 ], GuildSettings.prototype, "dmOnClose", void 0);
+__decorate([
+    (0, typeorm_1.Column)("simple-json", { nullable: true }),
+    __metadata("design:type", Object)
+], GuildSettings.prototype, "renderers", void 0);
 exports.GuildSettings = GuildSettings = __decorate([
     (0, typeorm_1.Entity)(),
     __metadata("design:paramtypes", [Object])
